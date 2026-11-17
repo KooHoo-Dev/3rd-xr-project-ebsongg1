@@ -62,6 +62,7 @@ public class CatWander : MonoBehaviour
     private static readonly int s_AlertHash = Animator.StringToHash("Alert");
 
     private Animator m_Animator;
+    private CatFace m_Face;
     private ARPlane m_Plane;
     private Transform m_Home;
     private State m_State = State.Waiting;
@@ -87,6 +88,7 @@ public class CatWander : MonoBehaviour
     private void Awake()
     {
         m_Animator = GetComponentInChildren<Animator>();
+        m_Face = GetComponent<CatFace>();
     }
 
     /// <summary>돌아다니기 시작. plane은 고양이가 놓인 평면, home은 집이 붙은 앵커.</summary>
@@ -220,6 +222,8 @@ public class CatWander : MonoBehaviour
         m_Timer = m_AlertTime;
         if (m_Animator != null)
             m_Animator.SetTrigger(s_AlertHash);
+        if (m_Face != null)
+            m_Face.Show(CatExpression.Surprised, m_AlertTime);
         Log("가장자리! 멈칫");
     }
 

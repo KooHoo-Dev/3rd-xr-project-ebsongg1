@@ -83,6 +83,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 8477643386457636440, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8891969720184441012}
+    - targetCorrespondingSourceObject: {fileID: 8477643386457636440, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6029937902352438124}
+    - targetCorrespondingSourceObject: {fileID: 8477643386457636440, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1918059026738832915}
   m_SourcePrefab: {fileID: 100100000, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
 --- !u!1 &833411898297022546 stripped
 GameObject:
@@ -112,3 +118,63 @@ MonoBehaviour:
   m_HouseHalfSize: {x: 0.09, y: 0.08}
   m_HomeRadius: 0.4
   m_DebugLog: 0
+--- !u!114 &6029937902352438124
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 833411898297022546}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d147cd600a13c9442936d0a81eebb5c7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatFace
+  m_Faces:
+  - expression: 0
+    material: {fileID: 2100000, guid: 36e02d79d513e4c42909114d4fd196d6, type: 2}
+  - expression: 1
+    material: {fileID: 2100000, guid: 38dba29403aedf64b882cf1a6f3ae776, type: 2}
+  - expression: 2
+    material: {fileID: 2100000, guid: 9305e6acf8676f045a0e225b68a4912b, type: 2}
+  - expression: 3
+    material: {fileID: 2100000, guid: 9d911830e787c39478c79ef828462691, type: 2}
+  - expression: 4
+    material: {fileID: 2100000, guid: 68d9acbb36d203040a36975e0838d1b3, type: 2}
+  - expression: 5
+    material: {fileID: 2100000, guid: 3efaa6c861ba0f548bc3feb779e0837f, type: 2}
+  - expression: 6
+    material: {fileID: 2100000, guid: 3f7d1eeda49270741a312ec480f8502b, type: 2}
+  - expression: 7
+    material: {fileID: 2100000, guid: 7261da149d23e6c42801adce6fc53a50, type: 2}
+  m_FaceSlot: 1
+--- !u!114 &1918059026738832915
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 833411898297022546}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b889c279aef7eec4a8bdf63dcfe6430d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatNeeds
+  m_Hunger: 0.2
+  m_Mood: 0.7
+  m_Sleepiness: 0.1
+  m_HungerRise: 0.01
+  m_MoodDecay: 0.004
+  m_HungryMoodDecay: 0.01
+  m_SleepinessRise: 0.006
+  m_SleepRecovery: 0.05
+  m_SleepHungerScale: 0.5
+  m_HungryAt: 0.7
+  m_SadMoodAt: 0.3
+  m_HappyMoodAt: 0.75
+  m_SleepyAt: 0.6
+  m_FallAsleepAt: 0.9
+  m_WakeUpAt: 0.1
+  m_FeedHunger: 0.5
+  m_FeedMood: 0.1
+  m_PetMood: 0.15

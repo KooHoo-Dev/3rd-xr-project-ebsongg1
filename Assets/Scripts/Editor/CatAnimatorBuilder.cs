@@ -31,6 +31,20 @@ public static class CatAnimatorBuilder
     private const string k_ClipFolder = "Assets/99. External Assets/Assets/Suriyun/Animations/Pspsps Animations/Character Animations";
     private const string k_DefaultCatPath = "Assets/99. External Assets/Assets/Suriyun/Pspsps/Prefab/Characters/Chibi_Cat_00.prefab";
 
+    // 표정 → 얼굴 머티리얼 번호 (M_Chibi_Emo_xx)
+    private const string k_EmoFolder = "Assets/99. External Assets/Assets/Suriyun/Pspsps/Materials/Emotions";
+    private static readonly (CatExpression expression, int number)[] k_Faces =
+    {
+        (CatExpression.Default, 3),
+        (CatExpression.Happy, 6),
+        (CatExpression.Excited, 4),
+        (CatExpression.Sad, 21),
+        (CatExpression.Annoyed, 10),
+        (CatExpression.Sleepy, 19),
+        (CatExpression.Sleeping, 5),
+        (CatExpression.Surprised, 2),
+    };
+
     // 파라미터 이름 (CatWander 등 스크립트에서 이 이름으로 부른다)
     public const string ParamSpeed = "Speed";
     public const string ParamSleeping = "Sleeping";
@@ -202,7 +216,37 @@ public static class CatAnimatorBuilder
         // 돌아다니기 스크립트도 붙여 둔다 (Inspector에서 속도 등을 조절할 수 있게)
         if (root.GetComponent<CatWander>() == null)
             root.AddComponent<CatWander>();
+
+        SetupFace(root);
+
+        // 상태값 (배고픔 · 기분 · 졸림)
+        if (root.GetComponent<CatNeeds>() == null)
+            root.AddComponent<CatNeeds>();
         return true;
+    }
+
+    /// <summary>CatFace를 붙이고 표정별 얼굴 머티리얼을 채운다.</summary>
+    private static void SetupFace(GameObject root)
+    {
+        var face = root.GetComponent<CatFace>();
+        if (face == null)
+            face = root.AddComponent<CatFace>();
+
+        var so = new SerializedObject(face);
+        var list = so.FindProperty("m_Faces");
+        list.arraySize = k_Faces.Length;
+        for (int i = 0; i < k_Faces.Length; i++)
+        {
+            string path = $"{k_EmoFolder}/M_Chibi_Emo_{k_Faces[i].number:D2}.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+                Debug.LogWarning($"[CatAnimatorBuilder] 얼굴 머티리얼을 찾지 못했어요: {path}");
+
+            var element = list.GetArrayElementAtIndex(i);
+            element.FindPropertyRelative("expression").enumValueIndex = (int)k_Faces[i].expression;
+            element.FindPropertyRelative("material").objectReferenceValue = material;
+        }
+        so.ApplyModifiedPropertiesWithoutUndo();
     }
 
     private static GameObject GetSourceCatPrefab()
