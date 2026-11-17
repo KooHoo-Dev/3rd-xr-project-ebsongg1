@@ -554,11 +554,12 @@ MonoBehaviour:
       m_Flags: 0
     m_Reference: {fileID: 83097790271614945, guid: c348712bda248c246b8c49b3db54643f, type: 3}
   m_MaxDistance: 5
+  m_DebugLog: 1
   m_Reticle: {fileID: 1384127849}
-  m_HousePrefab: {fileID: 0}
+  m_HousePrefab: {fileID: 8266793085676083690, guid: fa5ac74cc9601f74d94e681337da6a83, type: 3}
   m_CatPrefab: {fileID: 8477643386457636440, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
   m_CatScale: 0.075
-  m_CatOffset: {x: 0, y: 0, z: 0.12}
+  m_CatOffset: {x: 0, y: 0.008, z: 0.105}
   m_Placed:
     m_PersistentCalls:
       m_Calls: []
