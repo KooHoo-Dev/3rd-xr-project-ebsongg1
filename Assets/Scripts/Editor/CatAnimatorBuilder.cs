@@ -222,6 +222,10 @@ public static class CatAnimatorBuilder
         // 상태값 (배고픔 · 기분 · 졸림)
         if (root.GetComponent<CatNeeds>() == null)
             root.AddComponent<CatNeeds>();
+
+        // 쓰다듬기
+        if (root.GetComponent<CatPetting>() == null)
+            root.AddComponent<CatPetting>();
         return true;
     }
 

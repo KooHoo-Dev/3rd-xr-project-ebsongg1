@@ -89,6 +89,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 8477643386457636440, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1918059026738832915}
+    - targetCorrespondingSourceObject: {fileID: 8477643386457636440, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6040651158965211929}
   m_SourcePrefab: {fileID: 100100000, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
 --- !u!1 &833411898297022546 stripped
 GameObject:
@@ -178,3 +181,25 @@ MonoBehaviour:
   m_FeedHunger: 0.5
   m_FeedMood: 0.1
   m_PetMood: 0.15
+--- !u!114 &6040651158965211929
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 833411898297022546}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58f9ed68ed93a154291c43821ef0383b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatPetting
+  m_PetRadius: 0.11
+  m_HeadOffsetUp: 0.02
+  m_StrokeDistance: 0.035
+  m_Cooldown: 2.5
+  m_ScaleWithSize: 1
+  m_ReferenceScale: 0.06
+  m_ReactionTime: 2
+  m_HapticAmplitude: 0.3
+  m_HapticDuration: 0.1
+  m_DrawGizmo: 1
