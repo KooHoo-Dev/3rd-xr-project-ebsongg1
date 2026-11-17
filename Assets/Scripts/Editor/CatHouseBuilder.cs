@@ -29,7 +29,6 @@ public static class CatHouseBuilder
     static readonly Color k_WallColor = new Color(1.00f, 0.90f, 0.80f);   // 크림
     static readonly Color k_RoofColor = new Color(0.93f, 0.48f, 0.42f);   // 코랄
     static readonly Color k_DoorColor = new Color(0.30f, 0.20f, 0.17f);   // 어두운 갈색 (문 구멍처럼 보이게)
-    static readonly Color k_CushionColor = new Color(0.62f, 0.85f, 0.78f); // 민트
     static readonly Color k_BaseColor = new Color(0.82f, 0.66f, 0.50f);   // 나무 바닥
 
     [MenuItem("Tools/Here Kitty/고양이 집 만들기")]
@@ -41,7 +40,6 @@ public static class CatHouseBuilder
         var wall = MakeMaterial("CatHouse_Wall", k_WallColor);
         var roof = MakeMaterial("CatHouse_Roof", k_RoofColor);
         var door = MakeMaterial("CatHouse_Door", k_DoorColor);
-        var cushion = MakeMaterial("CatHouse_Cushion", k_CushionColor);
         var floor = MakeMaterial("CatHouse_Base", k_BaseColor);
 
         var root = new GameObject("CatHouse");
@@ -110,10 +108,6 @@ public static class CatHouseBuilder
             gable.AddComponent<MeshFilter>().sharedMesh = gableMesh;
             gable.AddComponent<MeshRenderer>().sharedMaterial = wall;
         }
-
-        // 문 앞 방석 (고양이가 앉을 자리)
-        AddCylinder(root, "Cushion", new Vector3(0f, k_Thick + 0.004f, k_Depth * 0.5f + 0.045f),
-            new Vector3(0.075f, 0.004f, 0.075f), cushion);
 
         // 저장
         var prefab = PrefabUtility.SaveAsPrefabAsset(root, k_PrefabPath);

@@ -1,0 +1,114 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &9094592883732563466
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 2705568518923737703, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0.01125922
+      objectReference: {fileID: 0}
+    - target: {fileID: 2705568518923737703, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0.028257411
+      objectReference: {fileID: 0}
+    - target: {fileID: 2886068241463164568, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: d37ca07135384e747bee1e576ab7c366, type: 2}
+    - target: {fileID: 2886068241463164568, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      propertyPath: m_ApplyRootMotion
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5139727103160051720, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0.01125922
+      objectReference: {fileID: 0}
+    - target: {fileID: 5139727103160051720, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0.028257411
+      objectReference: {fileID: 0}
+    - target: {fileID: 8477643386457636440, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      propertyPath: m_Name
+      value: Cat
+      objectReference: {fileID: 0}
+    - target: {fileID: 9146092942837900514, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9146092942837900514, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9146092942837900514, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9146092942837900514, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 9146092942837900514, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9146092942837900514, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9146092942837900514, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9146092942837900514, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9146092942837900514, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9146092942837900514, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8477643386457636440, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8891969720184441012}
+  m_SourcePrefab: {fileID: 100100000, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+--- !u!1 &833411898297022546 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8477643386457636440, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+  m_PrefabInstance: {fileID: 9094592883732563466}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8891969720184441012
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 833411898297022546}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 95a5c5510ba77c84f852e59866859ff0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatWander
+  m_WalkSpeed: 0.04
+  m_TurnSpeed: 200
+  m_StartWalkAngle: 45
+  m_WalkDistance: {x: 0.08, y: 0.25}
+  m_RestTime: {x: 1.5, y: 4}
+  m_EdgeMargin: 0.05
+  m_AlertTime: 1.2
+  m_EdgeCuriosity: 0.3
+  m_HouseHalfSize: {x: 0.09, y: 0.08}
+  m_HomeRadius: 0.4
+  m_DebugLog: 0

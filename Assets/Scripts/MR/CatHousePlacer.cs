@@ -45,11 +45,11 @@ public class CatHousePlacer : MonoBehaviour
     [SerializeField, Tooltip("고양이 프리팹 (예: Chibi_Cat_00)")]
     GameObject m_CatPrefab;
 
-    [SerializeField, Tooltip("처음 놓을 때 고양이 크기 (아기 단계). 어린이 0.1 · 어른 0.125 기준이면 아기는 0.075")]
-    float m_CatScale = 0.075f;
+    [SerializeField, Tooltip("처음 놓을 때 고양이 크기 (아기 단계). 성장 단계: 아기 0.06 → 어린이 0.08 → 어른 0.1")]
+    float m_CatScale = 0.06f;
 
-    [SerializeField, Tooltip("집 기준으로 고양이를 놓을 위치 (집 앞쪽)")]
-    Vector3 m_CatOffset = new Vector3(0f, 0f, 0.12f);
+    [SerializeField, Tooltip("집 기준으로 고양이를 놓을 위치 (집 문 앞, 책상 높이)")]
+    Vector3 m_CatOffset = new Vector3(0f, 0f, 0.105f);
 
     [Header("이벤트")]
     [SerializeField, Tooltip("다 놓은 뒤 실행. 고양이 Transform이 넘어온다")]
@@ -63,7 +63,7 @@ public class CatHousePlacer : MonoBehaviour
     public Transform PlacedCat { get; private set; }
     public ARPlane PlacedPlane { get; private set; }
 
-    void Awake()
+    private void Awake()
     {
         if (m_Reticle != null)
         {
@@ -74,7 +74,7 @@ public class CatHousePlacer : MonoBehaviour
         }
     }
 
-    void OnEnable()
+    private void OnEnable()
     {
         if (m_PlaceAction.action != null)
         {
@@ -86,7 +86,7 @@ public class CatHousePlacer : MonoBehaviour
             m_PlaneManager.trackablesChanged.AddListener(OnPlanesChanged);
     }
 
-    void OnDisable()
+    private void OnDisable()
     {
         if (m_PlaceAction.action != null)
             m_PlaceAction.action.performed -= OnPlacePressed;
@@ -95,7 +95,7 @@ public class CatHousePlacer : MonoBehaviour
             m_PlaneManager.trackablesChanged.RemoveListener(OnPlanesChanged);
     }
 
-    void Update()
+    private void Update()
     {
         if (IsPlaced)
             return;
@@ -117,7 +117,7 @@ public class CatHousePlacer : MonoBehaviour
     ///   2) 그 점이 평면의 실제 테두리(boundary 다각형) 안에 있는지 확인한다.
     /// 충돌체의 앞면/뒷면 방향이나 메시 생성 시점에 영향을 받지 않아 에디터와 Quest에서 똑같이 동작한다.
     /// </summary>
-    bool TryFindTarget(out ARPlane plane, out Pose pose)
+    private bool TryFindTarget(out ARPlane plane, out Pose pose)
     {
         plane = null;
         pose = default;
@@ -135,15 +135,15 @@ public class CatHousePlacer : MonoBehaviour
         foreach (var candidate in m_PlaneManager.trackables)
         {
             planeCount++;
-            if (!candidate.infinitePlane.Raycast(ray, out float distance) || distance > best)
+            if (candidate.infinitePlane.Raycast(ray, out float distance) == false || distance > best)
                 continue;
 
             var point = ray.GetPoint(distance);
-            if (!IsInsideBoundary(candidate, point))
+            if (IsInsideBoundary(candidate, point) == false)
                 continue;
 
             hitCount++;
-            if (!IsPlaceable(candidate, tableOnly))
+            if (IsPlaceable(candidate, tableOnly) == false)
                 continue;
 
             best = distance;
@@ -156,13 +156,13 @@ public class CatHousePlacer : MonoBehaviour
         return plane != null;
     }
 
-    /// <summary>점이 평면 테두리 다각형 안에 있는지 (평면 기준 x·z 좌표로 판정)</summary>
-    static bool IsInsideBoundary(ARPlane plane, Vector3 worldPoint)
+    /// <summary>점이 평면 테두리 다각형 안에 있는지 (평면 기준 x·z 좌표로 판정). CatWander도 가장자리 판정에 쓴다.</summary>
+    public static bool IsInsideBoundary(ARPlane plane, Vector3 worldPoint)
     {
         var local = plane.transform.InverseTransformPoint(worldPoint);
         var p = new Vector2(local.x, local.z);
         var boundary = plane.boundary;
-        if (!boundary.IsCreated || boundary.Length < 3)
+        if (boundary.IsCreated == false || boundary.Length < 3)
             return false;
 
         // 짝홀 규칙: 점에서 오른쪽으로 선을 그었을 때 테두리를 홀수 번 지나면 안쪽이다.
@@ -173,7 +173,7 @@ public class CatHousePlacer : MonoBehaviour
             var b = boundary[j];
             if ((a.y > p.y) != (b.y > p.y) &&
                 p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x)
-                inside = !inside;
+                inside = (inside == false); // true↔false 뒤집기
         }
         return inside;
     }
@@ -181,15 +181,15 @@ public class CatHousePlacer : MonoBehaviour
     float m_NextLogTime;
 
     /// <summary>놓을 곳을 못 찾을 때 이유를 1초에 한 번만 로그로 남긴다. (Quest에서는 MQDH 로그로 확인)</summary>
-    void LogStatus(string message)
+    private void LogStatus(string message)
     {
-        if (!m_DebugLog || Time.time < m_NextLogTime)
+        if (m_DebugLog == false || Time.time < m_NextLogTime)
             return;
         m_NextLogTime = Time.time + 1f;
         Debug.Log($"[CatHousePlacer] 놓을 곳 없음: {message}");
     }
 
-    static bool IsPlaceable(ARPlane plane, bool tableOnly)
+    private static bool IsPlaceable(ARPlane plane, bool tableOnly)
     {
         if (plane.alignment != PlaneAlignment.HorizontalUp)
             return false;
@@ -198,7 +198,7 @@ public class CatHousePlacer : MonoBehaviour
         return true;
     }
 
-    bool HasAnyTable()
+    private bool HasAnyTable()
     {
         if (m_PlaneManager == null)
             return false;
@@ -211,7 +211,7 @@ public class CatHousePlacer : MonoBehaviour
     }
 
     /// <summary>놓는 물체가 플레이어 쪽을 보도록 수평 방향만 돌린다.</summary>
-    static Quaternion FacePlayer(Vector3 point)
+    private static Quaternion FacePlayer(Vector3 point)
     {
         var cam = Camera.main;
         if (cam == null)
@@ -221,14 +221,14 @@ public class CatHousePlacer : MonoBehaviour
         return toPlayer.sqrMagnitude < 0.0001f ? Quaternion.identity : Quaternion.LookRotation(toPlayer.normalized, Vector3.up);
     }
 
-    void OnPlacePressed(InputAction.CallbackContext _)
+    private void OnPlacePressed(InputAction.CallbackContext _)
     {
-        if (IsPlaced || !m_HasTarget)
+        if (IsPlaced || m_HasTarget == false)
             return;
         Place(m_TargetPlane, m_TargetPose);
     }
 
-    void Place(ARPlane plane, Pose pose)
+    private void Place(ARPlane plane, Pose pose)
     {
         // 1) 평면에 앵커를 붙인다. 실패하면(시뮬레이션 등) 빈 오브젝트로 대신한다.
         Transform root = null;
@@ -256,6 +256,11 @@ public class CatHousePlacer : MonoBehaviour
             cat.transform.localRotation = Quaternion.identity;
             cat.transform.localScale = Vector3.one * m_CatScale;
             PlacedCat = cat.transform;
+
+            // 놓은 평면 안에서 돌아다니기 시작. 프리팹에 CatWander가 없으면 기본값으로 붙인다.
+            if (cat.TryGetComponent(out CatWander wander) == false)
+                wander = cat.AddComponent<CatWander>();
+            wander.Begin(plane, root);
         }
 
         IsPlaced = true;
@@ -269,10 +274,10 @@ public class CatHousePlacer : MonoBehaviour
         m_Placed.Invoke(PlacedCat);
     }
 
-    void OnPlanesChanged(ARTrackablesChangedEventArgs<ARPlane> args)
+    private void OnPlanesChanged(ARTrackablesChangedEventArgs<ARPlane> args)
     {
         // 놓은 뒤에 새로 인식된 평면도 숨긴다.
-        if (!IsPlaced)
+        if (IsPlaced == false)
             return;
         foreach (var plane in args.added)
             SetPlaneVisible(plane, false);
@@ -286,7 +291,7 @@ public class CatHousePlacer : MonoBehaviour
             SetPlaneVisible(plane, visible);
     }
 
-    static void SetPlaneVisible(ARPlane plane, bool visible)
+    private static void SetPlaneVisible(ARPlane plane, bool visible)
     {
         // ARPlaneMeshVisualizer는 평면이 갱신될 때마다 렌더러를 다시 켜므로, 렌더러만 끄면 곧바로 다시 보인다.
         // 그래서 시각화 컴포넌트 자체를 끈다. 꺼지면 패키지가 알아서 MeshRenderer · LineRenderer를 숨긴다.
