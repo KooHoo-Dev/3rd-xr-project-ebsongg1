@@ -33,6 +33,14 @@ public static class CatAnimatorBuilder
 
     private const string k_KoreanFontPath = "Assets/99. External Assets/Font/Noto_Sans_KR/NotoSansKR-Regular SDF.asset";
 
+    // 엔딩 탐험가 차림 소품: (프리팹, 붙일 뼈, 고양이 안에서 쓸 이름). 에셋 데모(Chibi_Cat_Show_Equipment)와 같은 자리
+    private const string k_AccessoryFolder = "Assets/99. External Assets/Assets/Suriyun/Pspsps/Prefab/Accessory";
+    private static readonly (string prefab, string bone, string name)[] k_EndingProps =
+    {
+        ("Hiking_hat_A", "Head_equipment", "Ending_Hat"),
+        ("Bag_bread_with_props", "Body_equipment", "Ending_Bag"),
+    };
+
     // 표정 → 얼굴 머티리얼 번호 (M_Chibi_Emo_xx)
     private const string k_EmoFolder = "Assets/99. External Assets/Assets/Suriyun/Pspsps/Materials/Emotions";
     private static readonly (CatExpression expression, int number)[] k_Faces =
@@ -232,6 +240,9 @@ public static class CatAnimatorBuilder
         if (root.GetComponent<CatGrowth>() == null)
             root.AddComponent<CatGrowth>();
 
+        // 엔딩 (탐험가 차림 → 인사 → 가장자리로 떠나기)
+        SetupEnding(root);
+
         // 단계별 행동 (졸기 · 인사 · 땅 파기 · 앉기 · 기뻐하기)
         if (root.GetComponent<CatBehaviors>() == null)
             root.AddComponent<CatBehaviors>();
@@ -258,6 +269,72 @@ public static class CatAnimatorBuilder
         if (root.GetComponent<CatEating>() == null)
             root.AddComponent<CatEating>();
         return true;
+    }
+
+    /// <summary>
+    /// 엔딩 소품(모자 · 가방)을 뼈에 미리 붙여 두고 꺼 둔다. CatEnding을 붙이고 소품을 연결한다.
+    /// 이미 붙어 있으면 다시 만들지 않는다.
+    /// </summary>
+    private static void SetupEnding(GameObject root)
+    {
+        var ending = root.GetComponent<CatEnding>();
+        if (ending == null)
+            ending = root.AddComponent<CatEnding>();
+
+        var props = new System.Collections.Generic.List<GameObject>();
+        foreach (var (prefabName, boneName, propName) in k_EndingProps)
+        {
+            var bone = FindChild(root.transform, boneName);
+            if (bone == null)
+            {
+                Debug.LogWarning($"[CatAnimatorBuilder] 소품을 붙일 뼈를 찾지 못했어요: {boneName}");
+                continue;
+            }
+
+            var existing = FindChild(bone, propName);
+            if (existing != null)
+            {
+                props.Add(existing.gameObject);
+                continue;
+            }
+
+            var source = AssetDatabase.LoadAssetAtPath<GameObject>($"{k_AccessoryFolder}/{prefabName}.prefab");
+            if (source == null)
+            {
+                Debug.LogWarning($"[CatAnimatorBuilder] 소품 프리팹을 찾지 못했어요: {prefabName}");
+                continue;
+            }
+
+            var prop = (GameObject)PrefabUtility.InstantiatePrefab(source, bone);
+            prop.name = propName;
+            prop.transform.localPosition = Vector3.zero;
+            prop.transform.localRotation = Quaternion.identity;
+            prop.transform.localScale = Vector3.one;
+            foreach (var col in prop.GetComponentsInChildren<Collider>(true))
+                Object.DestroyImmediate(col);
+            prop.SetActive(false);
+            props.Add(prop);
+        }
+
+        var so = new SerializedObject(ending);
+        var list = so.FindProperty("m_Props");
+        list.arraySize = props.Count;
+        for (int i = 0; i < props.Count; i++)
+            list.GetArrayElementAtIndex(i).objectReferenceValue = props[i];
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private static Transform FindChild(Transform parent, string childName)
+    {
+        if (parent.name == childName)
+            return parent;
+        foreach (Transform child in parent)
+        {
+            var found = FindChild(child, childName);
+            if (found != null)
+                return found;
+        }
+        return null;
     }
 
     /// <summary>CatFace를 붙이고 표정별 얼굴 머티리얼을 채운다.</summary>

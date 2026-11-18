@@ -1,21 +1,26 @@
 using System;
+using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
-/// 게임 전체 흐름: 시작 화면 → 고양이 집 배치 → 육성 → 엔딩
+/// 게임 전체 흐름: 시작 화면 → 고양이 집 배치 → 육성 → 엔딩 → 결과
 ///
 /// 1. Title  : 플레이어 앞에 시작 패널을 띄운다. 집 배치(CatHousePlacer)는 꺼 둔다.
 ///             패널이 시야에서 많이 벗어나면 다시 앞으로 옮긴다. (헤드셋을 쓰고 둘러볼 때)
 /// 2. Placing: 시작 버튼을 누르면 패널을 숨기고 배치를 켠다. 배치 안내 한 줄이 시선을 따라다닌다.
 /// 3. Raising: 집을 놓으면 안내를 숨기고 돌본 시간을 재기 시작한다.
-/// 4. Ending : 고양이가 다 자라면 (CatGrowth.Completed) 엔딩으로 넘어간다. 엔딩 화면은 다음 작업에서 연결.
+/// 4. Ending : 고양이가 다 자라면 (CatGrowth.IsComplete) 돌본 시간을 멈추고, 먹이 상자 · 먹이를 치우고,
+///             CatEnding 연출(탐험가 차림 → 인사 → 가장자리로 떠나기)을 재생한다.
+/// 5. Result : 고양이가 사라지면 결과 패널(돌본 시간 · 먹인 횟수 · 쓰다듬은 횟수)을 띄운다.
+///             "처음부터 다시" 버튼은 씬을 다시 불러온다.
 ///
-/// 시작 버튼의 OnClick에 StartGame()이 연결돼 있다. (Tools › Here Kitty › 시작 화면 만들기)
+/// 시작 버튼 → StartGame(), 다시 버튼 → Restart() (Tools › Here Kitty › 시작 · 결과 화면 만들기)
 /// </summary>
 [DisallowMultipleComponent]
 public class GameFlow : MonoBehaviour
 {
-    public enum State { Title, Placing, Raising, Ending }
+    public enum State { Title, Placing, Raising, Ending, Result }
 
     [Header("연결")]
     [SerializeField] private CatHousePlacer m_Placer;
@@ -25,6 +30,13 @@ public class GameFlow : MonoBehaviour
 
     [SerializeField, Tooltip("배치 안내 한 줄 (World Space Canvas)")]
     private Transform m_PlacementHint;
+
+    [SerializeField, Tooltip("결과 패널 (World Space Canvas)")]
+    private Transform m_ResultPanel;
+
+    [SerializeField] private TMP_Text m_ResultTimeText;
+    [SerializeField] private TMP_Text m_ResultFeedText;
+    [SerializeField] private TMP_Text m_ResultPetText;
 
     [Header("시작 패널 위치")]
     [SerializeField, Tooltip("플레이어 앞 거리 (m)")]
@@ -53,6 +65,8 @@ public class GameFlow : MonoBehaviour
     private float m_RaisingStartTime;
     private float m_RaisingEndTime = -1f;
     private CatGrowth m_Growth;
+    private int m_FeedCount;
+    private int m_PetCount;
 
     /// <summary>상태가 바뀔 때</summary>
     public event Action<State> StateChanged;
@@ -82,7 +96,15 @@ public class GameFlow : MonoBehaviour
             m_PlacementHint.gameObject.SetActive(false);
         if (m_StartPanel != null)
             m_StartPanel.gameObject.SetActive(true);
+        if (m_ResultPanel != null)
+            m_ResultPanel.gameObject.SetActive(false);
         m_PlaceTitleAt = Time.time + m_FirstPlaceDelay;
+    }
+
+    /// <summary>결과 패널의 "처음부터 다시" 버튼에서 부른다. 씬을 다시 불러온다.</summary>
+    public void Restart()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
     /// <summary>시작 버튼에서 부른다.</summary>
@@ -120,6 +142,10 @@ public class GameFlow : MonoBehaviour
                 if (m_Growth != null && m_Growth.IsComplete)
                     StartEnding();
                 break;
+
+            case State.Result:
+                KeepInView(m_ResultPanel);
+                break;
         }
     }
 
@@ -135,14 +161,18 @@ public class GameFlow : MonoBehaviour
             SnapInFront(m_StartPanel, m_PanelDistance, m_PanelDrop);
             return;
         }
+        KeepInView(m_StartPanel);
+    }
 
-        // 고개를 많이 돌려서 패널이 안 보이면 다시 앞으로
+    /// <summary>고개를 많이 돌려서 패널이 안 보이면 다시 앞으로</summary>
+    private void KeepInView(Transform panel)
+    {
         var cam = Camera.main;
-        if (cam == null)
+        if (panel == null || cam == null)
             return;
-        var toPanel = m_StartPanel.position - cam.transform.position;
+        var toPanel = panel.position - cam.transform.position;
         if (Vector3.Angle(Flat(cam.transform.forward), Flat(toPanel)) > m_RecenterAngle)
-            SnapInFront(m_StartPanel, m_PanelDistance, m_PanelDrop);
+            SnapInFront(panel, m_PanelDistance, m_PanelDrop);
     }
 
     private void OnPlaced()
@@ -159,6 +189,53 @@ public class GameFlow : MonoBehaviour
     {
         m_RaisingEndTime = Time.time;
         SetState(State.Ending);
+
+        var cat = m_Placer != null ? m_Placer.PlacedCat : null;
+
+        // 먹이 상자와 밖에 나와 있는 먹이를 치운다. (밥그릇 · 집은 남겨 둔다)
+        foreach (var box in FindObjectsByType<FoodBox>(FindObjectsSortMode.None))
+            box.gameObject.SetActive(false);
+        foreach (var food in FindObjectsByType<CatFood>(FindObjectsSortMode.None))
+        {
+            if (food.InBowl == false)
+                food.gameObject.SetActive(false);
+        }
+
+        if (cat != null && cat.TryGetComponent(out CatEnding ending))
+            ending.Play(ShowResult);
+        else
+            ShowResult();
+    }
+
+    private void ShowResult()
+    {
+        // 엔딩은 마지막 식사가 끝난 뒤 시작하므로 여기서 읽는다. (고양이가 꺼져 있어도 값은 남아 있다)
+        var cat = m_Placer != null ? m_Placer.PlacedCat : null;
+        m_FeedCount = cat != null && cat.TryGetComponent(out CatEating eating) ? eating.FeedCount : 0;
+        m_PetCount = cat != null && cat.TryGetComponent(out CatPetting petting) ? petting.PetCount : 0;
+
+        if (m_ResultTimeText != null)
+            m_ResultTimeText.text = FormatTime(CareSeconds);
+        if (m_ResultFeedText != null)
+            m_ResultFeedText.text = $"{m_FeedCount}번";
+        if (m_ResultPetText != null)
+            m_ResultPetText.text = $"{m_PetCount}번";
+
+        if (m_ResultPanel != null)
+        {
+            m_ResultPanel.gameObject.SetActive(true);
+            SnapInFront(m_ResultPanel, m_PanelDistance, m_PanelDrop);
+        }
+        SetState(State.Result);
+    }
+
+    /// <summary>452초 → "7분 32초"</summary>
+    private static string FormatTime(float seconds)
+    {
+        int total = Mathf.Max(0, Mathf.RoundToInt(seconds));
+        int minutes = total / 60;
+        int secs = total % 60;
+        return minutes > 0 ? $"{minutes}분 {secs}초" : $"{secs}초";
     }
 
     private void SetState(State state)

@@ -304,6 +304,18 @@ public class CatWander : MonoBehaviour
         StartWalk(pos + RandomizedDirection(pos - point) * UnityEngine.Random.Range(m_WalkDistance.x, m_WalkDistance.y));
     }
 
+    /// <summary>점이 고양이 집이나 등록된 장애물(밥그릇 · 먹이 상자) 자리인지. 엔딩에서 떠날 길을 고를 때 쓴다.</summary>
+    public bool IsBlocked(Vector3 worldPoint)
+    {
+        return IsInsideHouse(worldPoint) || TryGetObstacleAt(worldPoint, out _);
+    }
+
+    /// <summary>점이 돌아다녀도 되는 바닥(평면 테두리 안) 위인지</summary>
+    public bool IsOnWalkableSurface(Vector3 worldPoint)
+    {
+        return IsOnSurface(worldPoint);
+    }
+
     /// <summary>점이 등록된 장애물 반경 안에 있으면 그 장애물을 돌려준다.</summary>
     private bool TryGetObstacleAt(Vector3 worldPoint, out Transform obstacle)
     {

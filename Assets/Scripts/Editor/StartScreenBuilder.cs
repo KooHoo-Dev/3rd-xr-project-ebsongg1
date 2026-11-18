@@ -8,12 +8,13 @@ using UnityEngine.UI;
 using UnityEngine.XR.Interaction.Toolkit.UI;
 
 /// <summary>
-/// 메뉴 [Tools > Here Kitty > 시작 화면 만들기] 한 번으로 지금 열린 씬에 다음을 만든다.
+/// 메뉴 [Tools > Here Kitty > 시작 · 결과 화면 만들기] 한 번으로 지금 열린 씬에 다음을 만든다.
 ///
 /// - Start Panel: 앱 이름 · 한 줄 소개 · 사용법 4줄 · 시작 버튼 · 만든 사람 (World Space Canvas)
 /// - Placement Hint: 시작 후 "책상을 가리키고 트리거..." 안내 한 줄 (World Space Canvas)
+/// - Result Panel: 엔딩 후 돌본 시간 · 먹인 횟수 · 쓰다듬은 횟수 + "처음부터 다시" 버튼 (World Space Canvas)
 /// - EventSystem + XR UI Input Module: 컨트롤러 레이로 버튼을 누르기 위해 필요
-/// - GameFlow: 시작 버튼 OnClick → GameFlow.StartGame() 연결, CatHousePlacer 연결
+/// - GameFlow: 시작 버튼 → StartGame(), 다시 버튼 → Restart() 연결, CatHousePlacer · 결과 숫자 칸 연결
 /// - CatHousePlacer는 꺼 둔다 (시작 버튼을 누르면 GameFlow가 켠다)
 ///
 /// 다시 실행하면 같은 이름의 오브젝트를 지우고 새로 만든다. 문구 · 색 · 크기는 아래 상수를 고치고 다시 실행하면 된다.
@@ -25,6 +26,7 @@ public static class StartScreenBuilder
     private const string k_FlowName = "GameFlow";
     private const string k_PanelName = "Start Panel";
     private const string k_HintName = "Placement Hint";
+    private const string k_ResultName = "Result Panel";
     private const string k_EventSystemName = "EventSystem";
 
     // 문구
@@ -41,6 +43,12 @@ public static class StartScreenBuilder
     private const string k_Credit = "만든 사람: 송은빈";
     private const string k_Hint = "책상을 가리키고 <b>트리거</b>를 눌러 고양이 집을 놓으세요";
 
+    private const string k_ResultTitle = "고양이가 여행을 떠났어요!";
+    private const string k_ResultSubtitle = "잘 돌봐 줘서 고마워요";
+    private static readonly string[] k_ResultLabels = { "돌본 시간", "먹인 횟수", "쓰다듬은 횟수" };
+    private const string k_RestartLabel = "처음부터 다시";
+    private const float k_ResultHeight = 450f;
+
     // 크기 (mm)
     private const float k_PanelWidth = 560f;
     private const float k_PanelHeight = 540f;
@@ -54,7 +62,7 @@ public static class StartScreenBuilder
     private static readonly Color k_LineColor = new Color(0.88f, 0.80f, 0.72f);
     private static readonly Color k_HintColor = new Color(0.15f, 0.13f, 0.12f, 0.85f);
 
-    [MenuItem("Tools/Here Kitty/시작 화면 만들기")]
+    [MenuItem("Tools/Here Kitty/시작 · 결과 화면 만들기")]
     public static void Build()
     {
         var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(k_FontPath);
@@ -67,10 +75,12 @@ public static class StartScreenBuilder
         DestroyExisting(k_FlowName);
         DestroyExisting(k_PanelName);
         DestroyExisting(k_HintName);
+        DestroyExisting(k_ResultName);
 
         EnsureEventSystem();
         var panel = BuildStartPanel(font, out var startButton);
         var hint = BuildHint(font);
+        var result = BuildResultPanel(font, out var restartButton, out var values);
 
         var flowGo = new GameObject(k_FlowName);
         Undo.RegisterCreatedObjectUndo(flowGo, "Build Start Screen");
@@ -81,9 +91,16 @@ public static class StartScreenBuilder
         so.FindProperty("m_Placer").objectReferenceValue = placer;
         so.FindProperty("m_StartPanel").objectReferenceValue = panel;
         so.FindProperty("m_PlacementHint").objectReferenceValue = hint;
+        so.FindProperty("m_ResultPanel").objectReferenceValue = result;
+        so.FindProperty("m_ResultTimeText").objectReferenceValue = values[0];
+        so.FindProperty("m_ResultFeedText").objectReferenceValue = values[1];
+        so.FindProperty("m_ResultPetText").objectReferenceValue = values[2];
         so.ApplyModifiedPropertiesWithoutUndo();
 
         UnityEventTools.AddPersistentListener(startButton.onClick, flow.StartGame);
+        UnityEventTools.AddPersistentListener(restartButton.onClick, flow.Restart);
+        // 결과 패널은 엔딩 뒤에만 보인다.
+        result.gameObject.SetActive(false);
 
         if (placer != null)
         {
@@ -98,7 +115,7 @@ public static class StartScreenBuilder
 
         EditorSceneManager.MarkSceneDirty(flowGo.scene);
         Selection.activeObject = panel.gameObject;
-        Debug.Log("[StartScreenBuilder] 시작 화면을 만들었어요. 씬을 저장하세요.");
+        Debug.Log("[StartScreenBuilder] 시작 · 결과 화면을 만들었어요. 씬을 저장하세요.");
     }
 
     private static Transform BuildStartPanel(TMP_FontAsset font, out Button startButton)
@@ -138,7 +155,7 @@ public static class StartScreenBuilder
         PlaceTop(CreateImage(canvas.transform, "Line_Bottom", k_LineColor, null).rectTransform, y, k_PanelWidth - k_Padding * 2f, 2f);
         y += 26f;
 
-        startButton = CreateButton(canvas.transform, font, k_StartLabel);
+        startButton = CreateButton(canvas.transform, "Start Button", font, k_StartLabel);
         PlaceTop((RectTransform)startButton.transform, y, 240f, 64f);
         y += 84f;
 
@@ -214,9 +231,58 @@ public static class StartScreenBuilder
         return text;
     }
 
-    private static Button CreateButton(Transform parent, TMP_FontAsset font, string label)
+    /// <summary>
+    /// 결과 패널: 제목 · 한 줄 · 숫자 3줄(왼쪽 이름, 오른쪽 값) · 처음부터 다시 버튼.
+    /// values에 값 텍스트 3개(돌본 시간 · 먹인 횟수 · 쓰다듬은 횟수)를 돌려준다.
+    /// </summary>
+    private static Transform BuildResultPanel(TMP_FontAsset font, out Button restartButton, out TextMeshProUGUI[] values)
     {
-        var image = CreateImage(parent, "Start Button", k_AccentColor, RoundedSprite());
+        var canvas = CreateWorldCanvas(k_ResultName, new Vector2(k_PanelWidth, k_ResultHeight));
+        canvas.transform.position = new Vector3(0.7f, 1.4f, 0.8f);
+
+        var bg = CreateImage(canvas.transform, "Background", k_PanelColor, RoundedSprite());
+        Stretch(bg.rectTransform);
+
+        float inner = k_PanelWidth - k_Padding * 2f;
+        float y = k_Padding - 8f;
+        var title = CreateText(canvas.transform, "Title", k_ResultTitle, font, 40f, k_AccentColor, TextAlignmentOptions.Center);
+        title.fontStyle = FontStyles.Bold;
+        PlaceTop(title.rectTransform, y, inner, 60f);
+        y += 66f;
+
+        var subtitle = CreateText(canvas.transform, "Subtitle", k_ResultSubtitle, font, 24f, k_SubTextColor, TextAlignmentOptions.Center);
+        PlaceTop(subtitle.rectTransform, y, inner, 36f);
+        y += 52f;
+
+        PlaceTop(CreateImage(canvas.transform, "Line_Top", k_LineColor, null).rectTransform, y, inner, 2f);
+        y += 20f;
+
+        values = new TextMeshProUGUI[k_ResultLabels.Length];
+        float half = inner * 0.5f;
+        for (int i = 0; i < k_ResultLabels.Length; i++)
+        {
+            var label = CreateText(canvas.transform, $"Label_{i + 1}", k_ResultLabels[i], font, 24f, k_TextColor, TextAlignmentOptions.Left);
+            PlaceTop(label.rectTransform, y, half, 44f, -half * 0.5f);
+
+            values[i] = CreateText(canvas.transform, $"Value_{i + 1}", "-", font, 28f, k_AccentColor, TextAlignmentOptions.Right);
+            values[i].fontStyle = FontStyles.Bold;
+            PlaceTop(values[i].rectTransform, y, half, 44f, half * 0.5f);
+            y += 46f;
+        }
+        y += 14f;
+
+        PlaceTop(CreateImage(canvas.transform, "Line_Bottom", k_LineColor, null).rectTransform, y, inner, 2f);
+        y += 26f;
+
+        restartButton = CreateButton(canvas.transform, "Restart Button", font, k_RestartLabel);
+        PlaceTop((RectTransform)restartButton.transform, y, 260f, 64f);
+
+        return canvas.transform;
+    }
+
+    private static Button CreateButton(Transform parent, string buttonName, TMP_FontAsset font, string label)
+    {
+        var image = CreateImage(parent, buttonName, k_AccentColor, RoundedSprite());
         image.raycastTarget = true;
         var button = image.gameObject.AddComponent<Button>();
         var colors = button.colors;
@@ -272,11 +338,16 @@ public static class StartScreenBuilder
             Undo.AddComponent<XRUIInputModule>(eventSystem.gameObject);
     }
 
+    /// <summary>
+    /// 지금 열린 씬의 최상위 오브젝트 중 이름이 같은 것을 지운다.
+    /// (씬 전체 목록을 먼저 뽑아 두면, 부모를 지운 뒤 이미 지워진 자식을 읽다가 에러가 나서 최상위만 본다)
+    /// </summary>
     private static void DestroyExisting(string objectName)
     {
-        foreach (var go in Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        var scene = EditorSceneManager.GetActiveScene();
+        foreach (var go in scene.GetRootGameObjects())
         {
-            if (go.name == objectName && go.transform.parent == null && EditorUtility.IsPersistent(go) == false)
+            if (go != null && go.name == objectName)
                 Undo.DestroyObjectImmediate(go);
         }
     }
