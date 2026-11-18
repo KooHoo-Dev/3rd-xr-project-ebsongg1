@@ -1,7 +1,13 @@
+using TMPro;
 using UnityEngine;
 
 /// <summary>
-/// 고양이 머리 위에 상태값 아이콘 3개를 띄운다.
+/// 고양이 머리 위에 성장 게이지와 상태값 아이콘 3개를 띄운다.
+///
+/// 맨 위: 성장 단계 이름 (아기 · 어린이 · 어른) + 성장 막대 (CatGrowth가 있을 때만)
+///   - 자라는 중이면 금색, 배고프거나 기분이 나빠 멈췄으면 회색
+///   - 단계가 오르기 직전(게이지 가득)에는 깜빡인다
+/// 그 아래: 상태값 아이콘 3개
 ///
 /// - 생선: 배부름 (1 - 배고픔)
 /// - 하트: 기분
@@ -42,12 +48,25 @@ public class CatNeedsIcons : MonoBehaviour
 
     [SerializeField] private float m_BounceSpeed = 8f;
 
+    [Header("성장 게이지")]
+    [SerializeField, Tooltip("단계 이름 글꼴. 한글이 나오는 NotoSansKR-Regular SDF")]
+    private TMP_FontAsset m_Font;
+
+    [SerializeField, Tooltip("단계 이름 글자 크기 (월드 기준). 글자가 너무 크거나 작으면 이 값을 조절")]
+    private float m_LabelFontSize = 0.1f;
+
+    [SerializeField, Tooltip("성장 막대 높이 (m)")]
+    private float m_GrowthBarHeight = 0.004f;
+
     private static readonly Color s_FishColor = new Color(1.00f, 0.60f, 0.25f);
     private static readonly Color s_HeartColor = new Color(0.95f, 0.35f, 0.47f);
     private static readonly Color s_MoonColor = new Color(0.50f, 0.55f, 0.95f);
     private static readonly Color s_Good = new Color(0.35f, 0.80f, 0.45f);
     private static readonly Color s_Okay = new Color(0.98f, 0.78f, 0.25f);
     private static readonly Color s_Bad = new Color(0.95f, 0.30f, 0.25f);
+    private static readonly Color s_Growing = new Color(1.00f, 0.80f, 0.25f);
+    private static readonly Color s_Stopped = new Color(0.60f, 0.60f, 0.60f);
+    private static readonly string[] s_StageNames = { "아기", "어린이", "어른" };
 
     private static Sprite s_Disc, s_Fish, s_Heart, s_Moon, s_BarCenter, s_BarLeft;
 
@@ -63,10 +82,16 @@ public class CatNeedsIcons : MonoBehaviour
     private Transform m_Head;
     private Transform m_Holder;
     private Icon m_FishIcon, m_HeartIcon, m_MoonIcon;
+    private CatGrowth m_Growth;
+    private Transform m_GrowthFill;
+    private SpriteRenderer m_GrowthFillRenderer;
+    private TextMeshPro m_StageLabel;
+    private float m_GrowthBarWidth;
 
     private void Awake()
     {
         m_Needs = GetComponent<CatNeeds>();
+        m_Growth = GetComponent<CatGrowth>();
         m_Head = FindChild(transform, "head");
         if (m_Head == null)
             m_Head = transform;
@@ -113,6 +138,35 @@ public class CatNeedsIcons : MonoBehaviour
 
         // 자는 동안 달 아이콘을 가운데로
         m_MoonIcon.root.localPosition = new Vector3(sleeping ? 0f : m_MoonIcon.baseX, m_MoonIcon.root.localPosition.y, 0f);
+
+        UpdateGrowth();
+    }
+
+    private void UpdateGrowth()
+    {
+        if (m_Growth == null || m_GrowthFill == null)
+            return;
+
+        float progress = m_Growth.IsStageUpPending ? 1f : m_Growth.Progress;
+        m_GrowthFill.localScale = new Vector3(m_GrowthBarWidth * progress, m_GrowthFill.localScale.y, 1f);
+
+        Color color = m_Growth.IsGrowing || m_Growth.IsComplete ? s_Growing : s_Stopped;
+        if (m_Growth.IsStageUpPending)
+        {
+            // 단계가 오르기 직전: 반짝반짝
+            float blink = 0.5f + 0.5f * Mathf.Sin(Time.time * 10f);
+            color = Color.Lerp(s_Growing, Color.white, blink);
+        }
+        m_GrowthFillRenderer.color = color;
+
+        if (m_StageLabel != null)
+        {
+            string label = s_StageNames[Mathf.Clamp((int)m_Growth.Stage, 0, s_StageNames.Length - 1)];
+            if (m_Growth.IsComplete)
+                label += " · 다 자람";
+            if (m_StageLabel.text != label)
+                m_StageLabel.text = label;
+        }
     }
 
     private void UpdateIcon(Icon icon, float value, bool needsCare, bool visible, float phase)
@@ -138,6 +192,41 @@ public class CatNeedsIcons : MonoBehaviour
         m_FishIcon = MakeIcon("Fullness", s_Fish, s_FishColor, -m_Spacing);
         m_HeartIcon = MakeIcon("Mood", s_Heart, s_HeartColor, 0f);
         m_MoonIcon = MakeIcon("Energy", s_Moon, s_MoonColor, m_Spacing);
+
+        if (m_Growth != null)
+            BuildGrowthRow();
+    }
+
+    /// <summary>아이콘 줄 위에: 단계 이름 + 아이콘 줄 전체 너비의 성장 막대</summary>
+    private void BuildGrowthRow()
+    {
+        var row = new GameObject("Growth").transform;
+        row.SetParent(m_Holder, false);
+
+        m_GrowthBarWidth = m_Spacing * 2f + m_IconSize;
+        // 아이콘이 통통 튀어도(최대 약 1.1배 높이) 막대에 닿지 않게 띄운다.
+        float barY = m_IconSize * 1.6f;
+        AddSprite(row, "Bar", s_BarCenter, new Color(0f, 0f, 0f, 0.35f),
+            new Vector3(0f, barY, 0f), new Vector2(m_GrowthBarWidth, m_GrowthBarHeight), 0);
+        m_GrowthFillRenderer = AddSprite(row, "Fill", s_BarLeft, s_Growing,
+            new Vector3(-m_GrowthBarWidth * 0.5f, barY, -0.0005f), new Vector2(m_GrowthBarWidth, m_GrowthBarHeight), 1);
+        m_GrowthFill = m_GrowthFillRenderer.transform;
+
+        var labelGo = new GameObject("StageLabel");
+        labelGo.transform.SetParent(row, false);
+        m_StageLabel = labelGo.AddComponent<TextMeshPro>();
+        var font = m_Font != null ? m_Font : TMP_Settings.defaultFontAsset;
+        if (font != null)
+            m_StageLabel.font = font;
+        m_StageLabel.fontSize = m_LabelFontSize;
+        m_StageLabel.alignment = TextAlignmentOptions.Center;
+        m_StageLabel.textWrappingMode = TextWrappingModes.NoWrap;
+        m_StageLabel.color = Color.white;
+        m_StageLabel.outlineWidth = 0.25f;
+        m_StageLabel.outlineColor = new Color32(40, 40, 40, 255);
+        m_StageLabel.rectTransform.sizeDelta = new Vector2(m_GrowthBarWidth, m_IconSize * 0.8f);
+        m_StageLabel.transform.localPosition = new Vector3(0f, barY + m_GrowthBarHeight * 0.5f + m_IconSize * 0.45f, -0.0005f);
+        m_StageLabel.text = s_StageNames[0];
     }
 
     /// <summary>

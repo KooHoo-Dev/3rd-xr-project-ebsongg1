@@ -84,6 +84,9 @@ public class CatWander : MonoBehaviour
     /// <summary>지금 걷고 있는지 (돌기만 하는 중이면 false)</summary>
     public bool IsWalking => m_State == State.Walking && m_IsStepping;
 
+    /// <summary>제자리에서 쉬는 중인지 (CatBehaviors가 이때 가끔 다른 동작을 한다)</summary>
+    public bool IsResting => m_State == State.Resting;
+
     /// <summary>Pause()로 멈춰 있는지</summary>
     public bool IsPaused => m_State == State.Paused;
 

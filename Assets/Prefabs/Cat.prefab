@@ -98,6 +98,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 8477643386457636440, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6774174101706242730}
+    - targetCorrespondingSourceObject: {fileID: 8477643386457636440, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3303719771483491734}
+    - targetCorrespondingSourceObject: {fileID: 8477643386457636440, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 9129370019947040701}
   m_SourcePrefab: {fileID: 100100000, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
 --- !u!1 &833411898297022546 stripped
 GameObject:
@@ -181,6 +187,7 @@ MonoBehaviour:
   m_HungryAt: 0.7
   m_SadMoodAt: 0.3
   m_HappyMoodAt: 0.75
+  m_FullMoodAt: 0.95
   m_SleepyAt: 0.6
   m_FallAsleepAt: 0.9
   m_WakeUpAt: 0.1
@@ -249,3 +256,51 @@ MonoBehaviour:
   m_BounceHeight: 0.6
   m_BounceGrow: 0.3
   m_BounceSpeed: 8
+  m_Font: {fileID: 11400000, guid: 29e28123920a96c44a8416a41c2da4d9, type: 2}
+  m_LabelFontSize: 0.1
+  m_GrowthBarHeight: 0.004
+--- !u!114 &3303719771483491734
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 833411898297022546}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 191e67f99be46b34297964d741945388, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatGrowth
+  m_Stage: 0
+  m_Progress: 0
+  m_StageSeconds: 180
+  m_SpeedMultiplier: 1
+  m_FeedBonus: 0.05
+  m_PetBonus: 0.05
+  m_StageScales:
+  - 0.06
+  - 0.08
+  - 0.1
+  m_GrowTime: 1.2
+  m_CelebrateTime: 2.5
+  m_DebugLog: 0
+--- !u!114 &9129370019947040701
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 833411898297022546}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0398f0b9e4db6cd42af14dbd8503b183, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatBehaviors
+  m_IdleActionInterval: {x: 8, y: 15}
+  m_GreetFarDistance: 1
+  m_GreetNearDistance: 0.6
+  m_GreetCooldown: 20
+  m_AdultPetJoyChance: 0.5
+  m_TurnSpeed: 240
+  m_DefaultActionTime: 2
+  m_DebugLog: 0

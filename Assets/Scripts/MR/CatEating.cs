@@ -45,6 +45,8 @@ public class CatEating : MonoBehaviour
     private CatNeeds m_Needs;
     private CatFace m_Face;
     private CatWander m_Wander;
+    private CatGrowth m_Growth;
+    private CatBehaviors m_Behaviors;
     private FoodBowl m_Bowl;
     private ARPlane m_Plane;
     private State m_State = State.Idle;
@@ -64,6 +66,8 @@ public class CatEating : MonoBehaviour
         m_Needs = GetComponent<CatNeeds>();
         m_Face = GetComponent<CatFace>();
         m_Wander = GetComponent<CatWander>();
+        m_Growth = GetComponent<CatGrowth>();
+        m_Behaviors = GetComponent<CatBehaviors>();
     }
 
     /// <summary>밥그릇 연결. FoodBowl.SetCat()에서 부른다.</summary>
@@ -188,10 +192,16 @@ public class CatEating : MonoBehaviour
         if (m_Timer > 0f)
             return;
 
+        // 배고플 때 먹였으면 성장 보너스 (배부를 때 먹이는 건 보너스 없음)
+        if (m_Growth != null)
+            m_Growth.Care(CareKind.Feed, m_Needs != null && m_Needs.IsHungry);
         if (m_Needs != null)
             m_Needs.Feed(m_HungerAmount);
         FeedCount++;
         Log($"다 먹음 (총 {FeedCount}번)");
+        // 어른이면 먹고 나서 기뻐하기 (CatBehaviors가 다음 프레임에 재생)
+        if (m_Behaviors != null)
+            m_Behaviors.OnFed();
         Finish();
     }
 

@@ -1,0 +1,312 @@
+using UnityEngine;
+
+/// <summary>
+/// 성장 단계에 따라 할 수 있는 행동이 늘어난다.
+///
+/// 아기   : 걷기 · 먹기 · 자기 + 쉬다가 가끔 엎드려 졸기 (Doze = Quadruped_Chiling)
+/// 어린이 : + 인사 (플레이어가 다가오면 돌아보며 Hi) · 좋아하기 (쓰다듬으면 Cute1)
+/// 어른   : + 땅 파기 (DigA) · 앉기 (Sit) · 기뻐하기 (먹은 뒤 · 쓰다듬을 때 Jump)
+///
+/// 쉬는 중(CatWander.IsResting)에 m_IdleActionInterval마다 지금 단계에서 할 수 있는 동작 중 하나를 고른다.
+/// 동작하는 동안은 돌아다니기를 멈추고, 끝나면 다시 돌아다닌다.
+/// 자는 중 · 먹는 중 · 단계가 오르는 중 · 다른 동작 중이면 하지 않는다.
+///
+/// 쓰다듬을 때 어떤 동작을 할지는 CatPetting이 PetReaction()으로 물어본다.
+/// 먹고 난 뒤에는 CatEating이 OnFed()를 부른다.
+/// </summary>
+[DisallowMultipleComponent]
+[RequireComponent(typeof(CatNeeds))]
+public class CatBehaviors : MonoBehaviour
+{
+    private enum Action { None, Doze, Hi, Dig, Sit, Joy }
+
+    [Header("쉬다가 하는 동작")]
+    [SerializeField, Tooltip("쉬는 중에 다른 동작을 할 간격 (최소 · 최대, 초)")]
+    private Vector2 m_IdleActionInterval = new Vector2(8f, 15f);
+
+    [Header("인사 (어린이부터)")]
+    [SerializeField, Tooltip("플레이어가 이 거리보다 멀리 있다가 (m)")]
+    private float m_GreetFarDistance = 1.0f;
+
+    [SerializeField, Tooltip("이 거리 안으로 다가오면 인사한다 (m)")]
+    private float m_GreetNearDistance = 0.6f;
+
+    [SerializeField, Tooltip("인사한 뒤 다시 인사하기까지 (초)")]
+    private float m_GreetCooldown = 20f;
+
+    [Header("기뻐하기 (어른)")]
+    [SerializeField, Range(0f, 1f), Tooltip("어른이 쓰다듬어질 때 Cute1 대신 기뻐하기(Jump)를 할 확률")]
+    private float m_AdultPetJoyChance = 0.5f;
+
+    [Header("공통")]
+    [SerializeField, Tooltip("플레이어 쪽으로 도는 속도 (도/초)")]
+    private float m_TurnSpeed = 240f;
+
+    [SerializeField, Tooltip("클립 길이를 못 찾았을 때 동작 시간 (초)")]
+    private float m_DefaultActionTime = 2f;
+
+    [SerializeField, Tooltip("상태가 바뀔 때 로그 남기기 (디버그용)")]
+    private bool m_DebugLog = false;
+
+    // 동작 → Animator 트리거 · 클립 이름 (CatAnimatorBuilder와 같은 이름)
+    private static readonly int s_DozeHash = Animator.StringToHash("Doze");
+    private static readonly int s_HiHash = Animator.StringToHash("Hi");
+    private static readonly int s_DigHash = Animator.StringToHash("Dig");
+    private static readonly int s_SitHash = Animator.StringToHash("Sit");
+    private static readonly int s_JoyHash = Animator.StringToHash("Joy");
+    private static readonly int s_PetHash = Animator.StringToHash("Pet");
+
+    private Animator m_Animator;
+    private CatNeeds m_Needs;
+    private CatWander m_Wander;
+    private CatEating m_Eating;
+    private CatGrowth m_Growth;
+    private CatFace m_Face;
+
+    private Action m_Current = Action.None;
+    private bool m_Turning;
+    private float m_ActionTimer;
+    private float m_NextIdleAction;
+    private float m_NextGreet;
+    private bool m_PlayerWasFar = true;
+    private bool m_PendingJoy;
+
+    /// <summary>동작 중인지 (도는 중 포함)</summary>
+    public bool IsBusy => m_Current != Action.None;
+
+    private CatStage Stage => m_Growth != null ? m_Growth.Stage : CatStage.Baby;
+
+    private void Awake()
+    {
+        m_Animator = GetComponentInChildren<Animator>();
+        m_Needs = GetComponent<CatNeeds>();
+        m_Wander = GetComponent<CatWander>();
+        m_Eating = GetComponent<CatEating>();
+        m_Growth = GetComponent<CatGrowth>();
+        m_Face = GetComponent<CatFace>();
+        ScheduleIdleAction();
+    }
+
+    /// <summary>
+    /// 쓰다듬었을 때 재생할 트리거. 0이면 동작 없이 얼굴 · 진동만.
+    /// 아기: 없음 / 어린이: 좋아하기(Cute1) / 어른: 좋아하기 또는 기뻐하기(Jump)
+    /// </summary>
+    public int PetReaction()
+    {
+        switch (Stage)
+        {
+            case CatStage.Baby:
+                return 0;
+            case CatStage.Child:
+                return s_PetHash;
+            default:
+                return Random.value < m_AdultPetJoyChance ? s_JoyHash : s_PetHash;
+        }
+    }
+
+    /// <summary>먹고 난 직후 CatEating이 부른다. 어른이면 기뻐한다.</summary>
+    public void OnFed()
+    {
+        if (Stage == CatStage.Adult)
+            m_PendingJoy = true;
+    }
+
+    private void Update()
+    {
+        if (m_Current != Action.None)
+        {
+            UpdateAction();
+            return;
+        }
+
+        if (CanAct() == false)
+            return;
+
+        if (m_PendingJoy)
+        {
+            m_PendingJoy = false;
+            StartAction(Action.Joy, false);
+            return;
+        }
+
+        if (TryGreet())
+            return;
+
+        if (m_Wander != null && m_Wander.IsResting && Time.time >= m_NextIdleAction)
+        {
+            ScheduleIdleAction();
+            var action = PickIdleAction();
+            if (action != Action.None)
+                StartAction(action, action == Action.Hi);
+        }
+    }
+
+    private bool CanAct()
+    {
+        if (m_Needs.IsSleeping)
+            return false;
+        if (m_Eating != null && m_Eating.IsBusy)
+            return false;
+        if (m_Growth != null && m_Growth.IsStageUpPending)
+            return false;
+        // 다른 일(쓰다듬기 반응 등)로 멈춰 있으면 끼어들지 않는다.
+        if (m_Wander != null && m_Wander.IsPaused)
+            return false;
+        return true;
+    }
+
+    /// <summary>어린이부터: 플레이어가 멀리 있다가 가까이 오면 돌아보며 인사</summary>
+    private bool TryGreet()
+    {
+        var cam = Camera.main;
+        if (cam == null)
+            return false;
+        var offset = cam.transform.position - transform.position;
+        offset.y = 0f;
+        float distance = offset.magnitude;
+
+        bool greet = false;
+        if (m_PlayerWasFar && distance < m_GreetNearDistance)
+        {
+            m_PlayerWasFar = false;
+            greet = Stage >= CatStage.Child && Time.time >= m_NextGreet;
+        }
+        else if (distance > m_GreetFarDistance)
+        {
+            m_PlayerWasFar = true;
+        }
+
+        if (greet == false)
+            return false;
+        m_NextGreet = Time.time + m_GreetCooldown;
+        StartAction(Action.Hi, true);
+        return true;
+    }
+
+    /// <summary>지금 단계에서 쉬다가 할 수 있는 동작 중 하나 (위에 있는 것일수록 자주)</summary>
+    private Action PickIdleAction()
+    {
+        float r = Random.value;
+        switch (Stage)
+        {
+            case CatStage.Baby:
+                return Action.Doze;
+            case CatStage.Child:
+                return r < 0.6f ? Action.Doze : Action.Hi;
+            default:
+                if (r < 0.35f) return Action.Dig;
+                if (r < 0.6f) return Action.Sit;
+                if (r < 0.8f) return Action.Hi;
+                return Action.Doze;
+        }
+    }
+
+    private void StartAction(Action action, bool facePlayer)
+    {
+        m_Current = action;
+        m_Turning = facePlayer;
+        if (m_Wander != null)
+            m_Wander.Pause();
+        if (m_Turning == false)
+            PlayAnimation();
+        Log($"{action} 시작 (단계 {Stage})");
+    }
+
+    private void UpdateAction()
+    {
+        if (m_Turning)
+        {
+            if (TurnToPlayer())
+            {
+                m_Turning = false;
+                PlayAnimation();
+            }
+            return;
+        }
+
+        m_ActionTimer -= Time.deltaTime;
+        if (m_ActionTimer > 0f)
+            return;
+
+        Log($"{m_Current} 끝");
+        m_Current = Action.None;
+        if (m_Wander != null && m_Needs.IsSleeping == false)
+            m_Wander.Resume();
+    }
+
+    private void PlayAnimation()
+    {
+        var (hash, clip) = AnimationOf(m_Current);
+        m_ActionTimer = ClipLength(clip);
+        if (m_Animator != null && m_Animator.runtimeAnimatorController != null)
+            m_Animator.SetTrigger(hash);
+
+        if (m_Face == null)
+            return;
+        switch (m_Current)
+        {
+            case Action.Hi:
+            case Action.Joy:
+                m_Face.Show(CatExpression.Happy, m_ActionTimer);
+                break;
+            case Action.Doze:
+                m_Face.Show(CatExpression.Sleepy, m_ActionTimer);
+                break;
+            case Action.Dig:
+                m_Face.Show(CatExpression.Excited, m_ActionTimer);
+                break;
+        }
+    }
+
+    /// <summary>플레이어 쪽으로 돈다. 다 돌았으면 true</summary>
+    private bool TurnToPlayer()
+    {
+        var cam = Camera.main;
+        if (cam == null)
+            return true;
+        var toPlayer = cam.transform.position - transform.position;
+        toPlayer.y = 0f;
+        if (toPlayer.sqrMagnitude < 0.0001f)
+            return true;
+        var look = Quaternion.LookRotation(toPlayer.normalized, Vector3.up);
+        transform.rotation = Quaternion.RotateTowards(transform.rotation, look, m_TurnSpeed * Time.deltaTime);
+        return Quaternion.Angle(transform.rotation, look) < 5f;
+    }
+
+    private static (int hash, string clip) AnimationOf(Action action)
+    {
+        switch (action)
+        {
+            case Action.Doze: return (s_DozeHash, "Quadruped_Chiling");
+            case Action.Hi: return (s_HiHash, "Hi");
+            case Action.Dig: return (s_DigHash, "DigA");
+            case Action.Sit: return (s_SitHash, "Sit");
+            case Action.Joy: return (s_JoyHash, "Jump");
+            default: return (0, null);
+        }
+    }
+
+    /// <summary>Animator Controller에 들어 있는 클립 길이. 동작이 끝나고 돌아오는 시간까지 조금 더한다.</summary>
+    private float ClipLength(string clipName)
+    {
+        if (m_Animator == null || m_Animator.runtimeAnimatorController == null || string.IsNullOrEmpty(clipName))
+            return m_DefaultActionTime;
+        foreach (var clip in m_Animator.runtimeAnimatorController.animationClips)
+        {
+            if (clip != null && clip.name.EndsWith(clipName))
+                return clip.length + 0.3f;
+        }
+        return m_DefaultActionTime;
+    }
+
+    private void ScheduleIdleAction()
+    {
+        m_NextIdleAction = Time.time + Random.Range(m_IdleActionInterval.x, m_IdleActionInterval.y);
+    }
+
+    private void Log(string message)
+    {
+        if (m_DebugLog)
+            Debug.Log($"[CatBehaviors] {message}");
+    }
+}

@@ -45,6 +45,8 @@ public class CatNeeds : MonoBehaviour
     [SerializeField, Range(0f, 1f)] private float m_HungryAt = 0.7f;
     [SerializeField, Range(0f, 1f)] private float m_SadMoodAt = 0.3f;
     [SerializeField, Range(0f, 1f)] private float m_HappyMoodAt = 0.75f;
+    [SerializeField, Range(0f, 1f), Tooltip("기분이 이 이상이면 꽉 찬 것으로 본다 (이때 쓰다듬으면 성장 보너스 없음)")]
+    private float m_FullMoodAt = 0.95f;
     [SerializeField, Range(0f, 1f)] private float m_SleepyAt = 0.6f;
     [SerializeField, Range(0f, 1f)] private float m_FallAsleepAt = 0.9f;
     [SerializeField, Range(0f, 1f)] private float m_WakeUpAt = 0.1f;
@@ -81,6 +83,7 @@ public class CatNeeds : MonoBehaviour
     public bool IsHungry => m_Hunger >= m_HungryAt;
     public bool IsSad => m_Mood <= m_SadMoodAt;
     public bool IsSleepy => m_Sleepiness >= m_SleepyAt;
+    public bool IsMoodFull => m_Mood >= m_FullMoodAt;
 
     private void Awake()
     {

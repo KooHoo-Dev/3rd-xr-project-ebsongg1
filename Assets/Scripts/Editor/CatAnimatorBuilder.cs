@@ -9,7 +9,7 @@ using UnityEngine;
 ///
 /// 상태 구성
 /// - Locomotion (기본): 블렌드 트리. Speed 0 = Quadruped_Idle, 1 = Quadruped_Walk
-/// - 트리거 동작: Alert, Eat, Pet, Hi, Victory, Dig → 한 번 재생 후 Locomotion으로 돌아온다
+/// - 트리거 동작: Alert, Eat, Pet, Hi, Victory, Dig, Doze, Sit, Joy → 한 번 재생 후 Locomotion으로 돌아온다
 /// - Sleeping (bool): true면 Sleep, false가 되면 Locomotion으로 돌아온다
 ///
 /// 결과
@@ -30,6 +30,8 @@ public static class CatAnimatorBuilder
 
     private const string k_ClipFolder = "Assets/99. External Assets/Assets/Suriyun/Animations/Pspsps Animations/Character Animations";
     private const string k_DefaultCatPath = "Assets/99. External Assets/Assets/Suriyun/Pspsps/Prefab/Characters/Chibi_Cat_00.prefab";
+
+    private const string k_KoreanFontPath = "Assets/99. External Assets/Font/Noto_Sans_KR/NotoSansKR-Regular SDF.asset";
 
     // 표정 → 얼굴 머티리얼 번호 (M_Chibi_Emo_xx)
     private const string k_EmoFolder = "Assets/99. External Assets/Assets/Suriyun/Pspsps/Materials/Emotions";
@@ -58,6 +60,9 @@ public static class CatAnimatorBuilder
         ("Hi", "Hi"),
         ("Victory", "Victory"),
         ("Dig", "DigA"),
+        ("Doze", "Quadruped_Chiling"),
+        ("Sit", "Sit"),
+        ("Joy", "Jump"),
     };
 
     private const string k_IdleClip = "Quadruped_Idle";
@@ -223,9 +228,27 @@ public static class CatAnimatorBuilder
         if (root.GetComponent<CatNeeds>() == null)
             root.AddComponent<CatNeeds>();
 
-        // 머리 위 상태값 아이콘
-        if (root.GetComponent<CatNeedsIcons>() == null)
-            root.AddComponent<CatNeedsIcons>();
+        // 성장 (아기 → 어린이 → 어른)
+        if (root.GetComponent<CatGrowth>() == null)
+            root.AddComponent<CatGrowth>();
+
+        // 단계별 행동 (졸기 · 인사 · 땅 파기 · 앉기 · 기뻐하기)
+        if (root.GetComponent<CatBehaviors>() == null)
+            root.AddComponent<CatBehaviors>();
+
+        // 머리 위 성장 게이지 · 상태값 아이콘. 단계 이름은 한글 글꼴로
+        var icons = root.GetComponent<CatNeedsIcons>();
+        if (icons == null)
+            icons = root.AddComponent<CatNeedsIcons>();
+        var iconsSo = new SerializedObject(icons);
+        var fontProp = iconsSo.FindProperty("m_Font");
+        if (fontProp.objectReferenceValue == null)
+        {
+            fontProp.objectReferenceValue = AssetDatabase.LoadAssetAtPath<TMPro.TMP_FontAsset>(k_KoreanFontPath);
+            if (fontProp.objectReferenceValue == null)
+                Debug.LogWarning($"[CatAnimatorBuilder] 한글 글꼴을 찾지 못했어요: {k_KoreanFontPath}");
+            iconsSo.ApplyModifiedPropertiesWithoutUndo();
+        }
 
         // 쓰다듬기
         if (root.GetComponent<CatPetting>() == null)

@@ -74,6 +74,8 @@ public class CatPetting : MonoBehaviour
     private CatFace m_Face;
     private CatWander m_Wander;
     private CatEating m_Eating;
+    private CatGrowth m_Growth;
+    private CatBehaviors m_Behaviors;
     private float m_Stroke;
     private float m_CooldownUntil;
     private float m_ResumeWanderAt = -1f;
@@ -88,6 +90,8 @@ public class CatPetting : MonoBehaviour
         m_Face = GetComponent<CatFace>();
         m_Wander = GetComponent<CatWander>();
         m_Eating = GetComponent<CatEating>();
+        m_Growth = GetComponent<CatGrowth>();
+        m_Behaviors = GetComponent<CatBehaviors>();
         m_Head = FindChild(transform, "head");
         if (m_Head == null)
         {
@@ -144,6 +148,9 @@ public class CatPetting : MonoBehaviour
         m_CooldownUntil = Time.time + m_Cooldown;
         PetCount++;
 
+        // 기분이 꽉 차 있지 않을 때 쓰다듬었으면 성장 보너스 (연타로 빨리 크지 않게)
+        if (m_Growth != null)
+            m_Growth.Care(CareKind.Pet, m_Needs != null && m_Needs.IsMoodFull == false);
         if (m_Needs != null)
             m_Needs.Pet();
         if (hand.haptics != null)
@@ -153,8 +160,8 @@ public class CatPetting : MonoBehaviour
         if (m_Needs != null && m_Needs.IsSleeping)
             return;
 
-        // 먹으러 가거나 먹는 중이면 웃는 얼굴만 보여 주고, 동작 · 돌아다니기는 건드리지 않는다.
-        if (m_Eating != null && m_Eating.IsBusy)
+        // 먹으러 가거나 먹는 중 · 다른 동작(인사 · 땅 파기 등) 중이면 웃는 얼굴만 보여 주고, 동작 · 돌아다니기는 건드리지 않는다.
+        if ((m_Eating != null && m_Eating.IsBusy) || (m_Behaviors != null && m_Behaviors.IsBusy))
         {
             if (m_Face != null)
                 m_Face.Show(CatExpression.Happy, m_ReactionTime);
@@ -163,8 +170,11 @@ public class CatPetting : MonoBehaviour
 
         if (m_Face != null)
             m_Face.Show(CatExpression.Happy, m_ReactionTime);
-        if (m_Animator != null)
-            m_Animator.SetTrigger(s_PetHash);
+
+        // 단계별 반응: 아기는 동작 없음(얼굴 · 진동만), 어린이는 좋아하기, 어른은 좋아하기 또는 기뻐하기
+        int reaction = m_Behaviors != null ? m_Behaviors.PetReaction() : s_PetHash;
+        if (m_Animator != null && reaction != 0)
+            m_Animator.SetTrigger(reaction);
 
         // 돌아다니던 중이면 좋아하는 동안 멈춘다. (다른 일로 이미 멈춰 있으면 건드리지 않는다)
         if (m_Wander != null && (m_Wander.IsPaused == false || m_ResumeWanderAt > 0f))
