@@ -223,9 +223,17 @@ public static class CatAnimatorBuilder
         if (root.GetComponent<CatNeeds>() == null)
             root.AddComponent<CatNeeds>();
 
+        // 머리 위 상태값 아이콘
+        if (root.GetComponent<CatNeedsIcons>() == null)
+            root.AddComponent<CatNeedsIcons>();
+
         // 쓰다듬기
         if (root.GetComponent<CatPetting>() == null)
             root.AddComponent<CatPetting>();
+
+        // 밥그릇에 먹이가 들어오면 먹으러 가기
+        if (root.GetComponent<CatEating>() == null)
+            root.AddComponent<CatEating>();
         return true;
     }
 

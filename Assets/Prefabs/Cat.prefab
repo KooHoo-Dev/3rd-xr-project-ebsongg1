@@ -95,6 +95,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 8477643386457636440, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
       insertIndex: -1
       addedObject: {fileID: 7869247789684621093}
+    - targetCorrespondingSourceObject: {fileID: 8477643386457636440, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6774174101706242730}
   m_SourcePrefab: {fileID: 100100000, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
 --- !u!1 &833411898297022546 stripped
 GameObject:
@@ -226,3 +229,23 @@ MonoBehaviour:
   m_WakeUpForFood: 1
   m_ReferenceScale: 0.06
   m_DebugLog: 0
+--- !u!114 &6774174101706242730
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 833411898297022546}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8461a12375a25c9488ef232076677b2f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatNeedsIcons
+  m_HeightAboveHead: 0.075
+  m_IconSize: 0.016
+  m_Spacing: 0.022
+  m_ReferenceScale: 0.06
+  m_OnlyMoonWhileSleeping: 1
+  m_BounceHeight: 0.6
+  m_BounceGrow: 0.3
+  m_BounceSpeed: 8
