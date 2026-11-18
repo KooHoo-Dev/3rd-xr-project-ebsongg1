@@ -7,8 +7,12 @@ using UnityEngine;
 /// - 기분 Mood: 시간이 지나면 조금씩 내려가고, 배고프면 더 빨리 내려간다. 쓰다듬기 · 먹이로 오른다. (1 = 아주 좋음)
 /// - 졸림 Sleepiness: 깨어 있으면 오르고, 자는 동안 내려간다. (1 = 아주 졸림)
 ///
-/// 졸림이 m_FallAsleepAt 이상이 되면 CatWander를 멈추고 잠든다 (Animator Sleeping = true → Sleep 동작 · 잠자는 얼굴).
+/// 재우기
+/// - 졸릴 때 플레이어가 방석을 가져다주면 CatSleeping이 방석 위로 올라가 FallAsleep()을 부른다.
+///   방석 위에서는 SleepRecoveryMultiplier만큼 빨리 개운해진다.
+/// - 아무도 재워 주지 않아 졸림이 m_FallAsleepAt 이상이 되면 그 자리에서 쓰러지듯 잠들고 기분이 조금 떨어진다.
 /// 졸림이 m_WakeUpAt 이하로 내려가면 깨어나서 다시 돌아다닌다.
+/// (HoldWanderOnWake가 켜져 있으면 깰 때 돌아다니기를 다시 시작하지 않는다. 방석에서 내려오는 건 CatSleeping이 맡는다)
 ///
 /// 상태에 따라 CatFace의 기본 표정을 정한다. (졸림 → 19, 배고픔 · 기분 낮음 → 21, 기분 좋음 → 06, 그 외 → 03)
 ///
@@ -61,12 +65,16 @@ public class CatNeeds : MonoBehaviour
     [SerializeField, Tooltip("쓰다듬기 한 번에 기분 증가")]
     private float m_PetMood = 0.15f;
 
+    [SerializeField, Tooltip("재워 주지 않아 쓰러지듯 잠들 때 기분 감소")]
+    private float m_ExhaustedMoodPenalty = 0.15f;
+
     private static readonly int s_SleepingHash = Animator.StringToHash("Sleeping");
 
     private Animator m_Animator;
     private CatWander m_Wander;
     private CatFace m_Face;
     private CatEating m_Eating;
+    private CatSleeping m_Sleeping;
     private bool m_IsSleeping;
     private bool m_PausedWanderForSleep;
 
@@ -85,12 +93,26 @@ public class CatNeeds : MonoBehaviour
     public bool IsSleepy => m_Sleepiness >= m_SleepyAt;
     public bool IsMoodFull => m_Mood >= m_FullMoodAt;
 
+    /// <summary>자는 동안 졸림이 내려가는 속도 배율. 방석 위에서 자면 CatSleeping이 올린다.</summary>
+    public float SleepRecoveryMultiplier { get; set; } = 1f;
+
+    /// <summary>true면 깰 때 돌아다니기를 다시 시작하지 않는다. (방석에서 내려오는 동작을 CatSleeping이 맡을 때)</summary>
+    public bool HoldWanderOnWake { get; set; }
+
     private void Awake()
     {
         m_Animator = GetComponentInChildren<Animator>();
         m_Wander = GetComponent<CatWander>();
         m_Face = GetComponent<CatFace>();
         m_Eating = GetComponent<CatEating>();
+        m_Sleeping = GetComponent<CatSleeping>();
+    }
+
+    /// <summary>지금 바로 잠든다. (방석 위에 올라간 뒤 CatSleeping이 부른다)</summary>
+    public void FallAsleep()
+    {
+        if (m_IsSleeping == false)
+            SetSleeping(true);
     }
 
     private void Update()
@@ -130,7 +152,7 @@ public class CatNeeds : MonoBehaviour
         m_Mood = Clamp(m_Mood - moodDecay * dt);
 
         if (m_IsSleeping)
-            m_Sleepiness = Clamp(m_Sleepiness - m_SleepRecovery * dt);
+            m_Sleepiness = Clamp(m_Sleepiness - m_SleepRecovery * SleepRecoveryMultiplier * dt);
         else
             m_Sleepiness = Clamp(m_Sleepiness + m_SleepinessRise * dt);
     }
@@ -144,10 +166,16 @@ public class CatNeeds : MonoBehaviour
             return;
         }
 
-        // 다른 일(먹기 등)로 CatWander가 멈춰 있거나 먹으러 가는 중일 때는 그 일이 끝날 때까지 기다린다.
-        bool busy = (m_Wander != null && m_Wander.IsPaused) || (m_Eating != null && m_Eating.IsBusy);
+        // 다른 일(먹기 · 방석으로 가기 등)로 CatWander가 멈춰 있거나 바쁠 때는 그 일이 끝날 때까지 기다린다.
+        bool busy = (m_Wander != null && m_Wander.IsPaused)
+            || (m_Eating != null && m_Eating.IsBusy)
+            || (m_Sleeping != null && m_Sleeping.IsBusy);
         if (m_Sleepiness >= m_FallAsleepAt && busy == false)
+        {
+            // 아무도 재워 주지 않았다 → 그 자리에서 쓰러지듯 잠들고 기분이 조금 떨어진다.
+            m_Mood = Clamp(m_Mood - m_ExhaustedMoodPenalty);
             SetSleeping(true);
+        }
     }
 
     private void SetSleeping(bool sleeping)
@@ -165,7 +193,8 @@ public class CatNeeds : MonoBehaviour
             }
             else if (m_PausedWanderForSleep)
             {
-                m_Wander.Resume();
+                if (HoldWanderOnWake == false)
+                    m_Wander.Resume();
                 m_PausedWanderForSleep = false;
             }
         }

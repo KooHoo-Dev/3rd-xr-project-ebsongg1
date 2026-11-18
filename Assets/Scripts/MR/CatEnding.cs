@@ -52,6 +52,7 @@ public class CatEnding : MonoBehaviour
     private CatEating m_Eating;
     private CatBehaviors m_Behaviors;
     private CatGrowth m_Growth;
+    private CatSleeping m_Sleeping;
     private CatFace m_Face;
 
     private Step m_Step = Step.None;
@@ -72,6 +73,7 @@ public class CatEnding : MonoBehaviour
         m_Eating = GetComponent<CatEating>();
         m_Behaviors = GetComponent<CatBehaviors>();
         m_Growth = GetComponent<CatGrowth>();
+        m_Sleeping = GetComponent<CatSleeping>();
         m_Face = GetComponent<CatFace>();
     }
 
@@ -132,6 +134,9 @@ public class CatEnding : MonoBehaviour
             return false;
         if (m_Behaviors != null && m_Behaviors.IsBusy)
             return false;
+        // 방석 위에서 깨웠으면 내려올 때까지 기다린다.
+        if (m_Sleeping != null && m_Sleeping.IsBusy)
+            return false;
         if (m_Growth != null && m_Growth.IsStageUpPending)
             return false;
         return true;
@@ -145,6 +150,7 @@ public class CatEnding : MonoBehaviour
         DisableIfPresent<CatPetting>();
         DisableIfPresent<CatEating>();
         DisableIfPresent<CatBehaviors>();
+        DisableIfPresent<CatSleeping>();
         DisableIfPresent<CatGrowth>();
         DisableIfPresent<CatNeedsIcons>();
 

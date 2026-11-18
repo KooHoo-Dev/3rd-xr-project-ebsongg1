@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
+using UnityEngine.XR.Interaction.Toolkit.Filtering;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
 
@@ -13,10 +14,11 @@ using UnityEngine.XR.Interaction.Toolkit.Interactors;
 ///    고양이(CatEating)는 HasFood를 보고 걸어와서 먹는다.
 /// 3. 고양이가 Consume()을 부르면 먹이가 작아지며 사라진다.
 /// 밥그릇이 비어 있을 때만 먹이를 받는다.
+/// 소켓 필터로 CatFood가 붙은 물체만 끌어당긴다. (방석 같은 다른 잡을 수 있는 물건은 무시)
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(XRSocketInteractor))]
-public class FoodBowl : MonoBehaviour
+public class FoodBowl : MonoBehaviour, IXRSelectFilter, IXRHoverFilter
 {
     [SerializeField, Tooltip("밥그릇 안에서 먹이가 놓일 자리")]
     private Transform m_FoodSlot;
@@ -41,6 +43,21 @@ public class FoodBowl : MonoBehaviour
         m_Socket = GetComponent<XRSocketInteractor>();
         if (m_FoodSlot != null)
             m_Socket.attachTransform = m_FoodSlot;
+        m_Socket.selectFilters.Add(this);
+        m_Socket.hoverFilters.Add(this);
+    }
+
+    // ── 소켓 필터: 먹이(CatFood)만 끌어당기고 미리보기도 먹이에만 보여 준다 ──
+    public bool canProcess => isActiveAndEnabled;
+
+    public bool Process(IXRSelectInteractor interactor, IXRSelectInteractable interactable)
+    {
+        return interactable.transform.GetComponent<CatFood>() != null;
+    }
+
+    public bool Process(IXRHoverInteractor interactor, IXRHoverInteractable interactable)
+    {
+        return interactable.transform.GetComponent<CatFood>() != null;
     }
 
     private void OnEnable()

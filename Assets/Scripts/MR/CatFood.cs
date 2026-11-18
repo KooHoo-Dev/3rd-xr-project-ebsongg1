@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// 고양이 먹이 표시. 밥그릇(FoodBowl)은 이 컴포넌트가 붙은 물체만 받는다.
-/// 잡기는 같은 오브젝트의 XRGrabInteractable + Rigidbody가 맡는다. (Tools › Here Kitty › 먹이 · 밥그릇 만들기)
+/// 잡기는 같은 오브젝트의 XRGrabInteractable + Rigidbody가 맡는다. (Tools › Here Kitty › 먹이 · 밥그릇 · 방석 만들기)
 /// 먹이는 먹이 상자(FoodBox)에서 나온다.
 /// </summary>
 [DisallowMultipleComponent]

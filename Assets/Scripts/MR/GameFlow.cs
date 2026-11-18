@@ -10,6 +10,9 @@ using UnityEngine.SceneManagement;
 ///             패널이 시야에서 많이 벗어나면 다시 앞으로 옮긴다. (헤드셋을 쓰고 둘러볼 때)
 /// 2. Placing: 시작 버튼을 누르면 패널을 숨기고 배치를 켠다. 배치 안내 한 줄이 시선을 따라다닌다.
 /// 3. Raising: 집을 놓으면 안내를 숨기고 돌본 시간을 재기 시작한다.
+///             처음 한 번씩 안내 한 줄을 띄운다 (같은 안내 칸을 다시 쓴다):
+///             집을 놓은 직후 → 쓰다듬기, 처음 배고플 때 → 먹이 주기, 처음 졸릴 때 → 방석으로 재우기.
+///             그 행동을 하거나 m_HintDuration초가 지나면 사라진다. 이미 해 본 행동이면 건너뛴다.
 /// 4. Ending : 고양이가 다 자라면 (CatGrowth.IsComplete) 돌본 시간을 멈추고, 먹이 상자 · 먹이를 치우고,
 ///             CatEnding 연출(탐험가 차림 → 인사 → 가장자리로 떠나기)을 재생한다.
 /// 5. Result : 고양이가 사라지면 결과 패널(돌본 시간 · 먹인 횟수 · 쓰다듬은 횟수)을 띄운다.
@@ -60,7 +63,30 @@ public class GameFlow : MonoBehaviour
     [SerializeField, Tooltip("안내가 시선을 따라오는 빠르기")]
     private float m_HintFollowSpeed = 3f;
 
+    [Header("처음 한 번 안내 (육성 중)")]
+    [SerializeField] private string m_PetHint = "고양이 머리를 컨트롤러로 <b>문질러</b> 쓰다듬어 보세요";
+    [SerializeField] private string m_FeedHint = "배고파해요! 상자에서 생선을 <b>그립</b>으로 집어 밥그릇에 넣어 주세요";
+    [SerializeField] private string m_SleepHint = "졸려해요! 방석을 <b>그립</b>으로 집어 고양이 옆에 놓아 주세요";
+
+    [SerializeField, Tooltip("집을 놓고 쓰다듬기 안내가 뜨기까지 (초)")]
+    private float m_PetHintDelay = 2f;
+
+    [SerializeField, Tooltip("행동을 안 해도 이 시간이 지나면 안내가 사라진다 (초)")]
+    private float m_HintDuration = 20f;
+
+    private enum CareHint { Pet, Feed, Sleep, Count }
+
     private State m_State = State.Title;
+    private TMP_Text m_HintLabel;
+    private readonly bool[] m_HintShown = new bool[(int)CareHint.Count];
+    private int m_ActiveHint = -1;
+    private int m_HintBaseline;
+    private float m_HintHideAt;
+    private float m_PetHintAt;
+    private CatNeeds m_CatNeeds;
+    private CatPetting m_CatPetting;
+    private CatEating m_CatEating;
+    private CatSleeping m_CatSleeping;
     private float m_PlaceTitleAt;
     private float m_RaisingStartTime;
     private float m_RaisingEndTime = -1f;
@@ -93,7 +119,10 @@ public class GameFlow : MonoBehaviour
         if (m_Placer != null)
             m_Placer.enabled = false;
         if (m_PlacementHint != null)
+        {
+            m_HintLabel = m_PlacementHint.GetComponentInChildren<TMP_Text>(true);
             m_PlacementHint.gameObject.SetActive(false);
+        }
         if (m_StartPanel != null)
             m_StartPanel.gameObject.SetActive(true);
         if (m_ResultPanel != null)
@@ -139,6 +168,7 @@ public class GameFlow : MonoBehaviour
                 break;
 
             case State.Raising:
+                UpdateCareHints();
                 if (m_Growth != null && m_Growth.IsComplete)
                     StartEnding();
                 break;
@@ -181,13 +211,81 @@ public class GameFlow : MonoBehaviour
             m_PlacementHint.gameObject.SetActive(false);
         m_RaisingStartTime = Time.time;
         var cat = m_Placer.PlacedCat;
-        m_Growth = cat != null ? cat.GetComponent<CatGrowth>() : null;
+        if (cat != null)
+        {
+            m_Growth = cat.GetComponent<CatGrowth>();
+            m_CatNeeds = cat.GetComponent<CatNeeds>();
+            m_CatPetting = cat.GetComponent<CatPetting>();
+            m_CatEating = cat.GetComponent<CatEating>();
+            m_CatSleeping = cat.GetComponent<CatSleeping>();
+        }
+        m_PetHintAt = Time.time + m_PetHintDelay;
         SetState(State.Raising);
+    }
+
+    /// <summary>쓰다듬기 · 먹이 · 재우기 안내를 처음 한 번씩 띄우고, 그 행동을 하면 숨긴다.</summary>
+    private void UpdateCareHints()
+    {
+        if (m_PlacementHint == null || m_HintLabel == null)
+            return;
+
+        if (m_ActiveHint >= 0)
+        {
+            FollowGaze(m_PlacementHint, m_HintDistance, m_HintDrop);
+            if (CareCount((CareHint)m_ActiveHint) > m_HintBaseline || Time.time >= m_HintHideAt
+                || (m_ActiveHint == (int)CareHint.Sleep && m_CatNeeds != null && m_CatNeeds.IsSleeping))
+                HideCareHint();
+            return;
+        }
+
+        if (Time.time >= m_PetHintAt)
+            TryShowCareHint(CareHint.Pet, m_PetHint);
+        if (m_ActiveHint < 0 && m_CatNeeds != null && m_CatNeeds.IsHungry)
+            TryShowCareHint(CareHint.Feed, m_FeedHint);
+        if (m_ActiveHint < 0 && m_CatSleeping != null && m_CatNeeds != null && m_CatNeeds.IsSleepy && m_CatNeeds.IsSleeping == false)
+            TryShowCareHint(CareHint.Sleep, m_SleepHint);
+    }
+
+    private void TryShowCareHint(CareHint hint, string text)
+    {
+        int i = (int)hint;
+        if (m_HintShown[i])
+            return;
+        m_HintShown[i] = true;
+        // 이미 해 본 행동이면 안내하지 않는다.
+        if (CareCount(hint) > 0)
+            return;
+
+        m_ActiveHint = i;
+        m_HintBaseline = CareCount(hint);
+        m_HintHideAt = Time.time + m_HintDuration;
+        m_HintLabel.text = text;
+        m_PlacementHint.gameObject.SetActive(true);
+        SnapInFront(m_PlacementHint, m_HintDistance, m_HintDrop);
+    }
+
+    private void HideCareHint()
+    {
+        m_ActiveHint = -1;
+        if (m_PlacementHint != null)
+            m_PlacementHint.gameObject.SetActive(false);
+    }
+
+    private int CareCount(CareHint hint)
+    {
+        switch (hint)
+        {
+            case CareHint.Pet: return m_CatPetting != null ? m_CatPetting.PetCount : 0;
+            case CareHint.Feed: return m_CatEating != null ? m_CatEating.FeedCount : 0;
+            case CareHint.Sleep: return m_CatSleeping != null ? m_CatSleeping.CushionSleepCount : 0;
+            default: return 0;
+        }
     }
 
     private void StartEnding()
     {
         m_RaisingEndTime = Time.time;
+        HideCareHint();
         SetState(State.Ending);
 
         var cat = m_Placer != null ? m_Placer.PlacedCat : null;

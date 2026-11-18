@@ -46,6 +46,7 @@ public class CatEating : MonoBehaviour
     private CatWander m_Wander;
     private CatGrowth m_Growth;
     private CatBehaviors m_Behaviors;
+    private CatSleeping m_Sleeping;
     private FoodBowl m_Bowl;
     private State m_State = State.Idle;
     private float m_Timer;
@@ -66,6 +67,7 @@ public class CatEating : MonoBehaviour
         m_Wander = GetComponent<CatWander>();
         m_Growth = GetComponent<CatGrowth>();
         m_Behaviors = GetComponent<CatBehaviors>();
+        m_Sleeping = GetComponent<CatSleeping>();
     }
 
     /// <summary>밥그릇 연결. FoodBowl.SetCat()에서 부른다.</summary>
@@ -99,6 +101,10 @@ public class CatEating : MonoBehaviour
 
     private void TryStartGoing()
     {
+        // 방석으로 가는 중 · 방석 위에서 자는 중 · 내려오는 중이면 끝날 때까지 기다린다. (방석 위에서는 깨우지 않는다)
+        if (m_Sleeping != null && m_Sleeping.IsBusy)
+            return;
+
         if (m_Needs != null && m_Needs.IsSleeping)
         {
             if (m_WakeUpForFood == false)

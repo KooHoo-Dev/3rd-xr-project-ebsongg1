@@ -51,17 +51,29 @@ public class CatHousePlacer : MonoBehaviour
     [SerializeField, Tooltip("집 기준으로 고양이를 놓을 위치 (집 문 앞, 책상 높이)")]
     Vector3 m_CatOffset = new Vector3(0f, 0f, 0.105f);
 
-    [SerializeField, Tooltip("밥그릇 프리팹 (Tools › Here Kitty › 먹이 · 밥그릇 만들기). 비워 두면 밥그릇 없이 놓는다")]
+    [SerializeField, Tooltip("밥그릇 프리팹 (Tools › Here Kitty › 먹이 · 밥그릇 · 방석 만들기). 비워 두면 밥그릇 없이 놓는다")]
     private GameObject m_BowlPrefab;
 
     [SerializeField, Tooltip("집 기준으로 밥그릇을 놓을 위치. 평면 밖이면 반대쪽(x 뒤집기)에 놓는다")]
     private Vector3 m_BowlOffset = new Vector3(0.13f, 0f, 0.04f);
 
-    [SerializeField, Tooltip("먹이 상자 프리팹 (Tools › Here Kitty › 먹이 · 밥그릇 만들기). 비워 두면 먹이가 나오지 않는다")]
+    [SerializeField, Tooltip("먹이 상자 프리팹 (Tools › Here Kitty › 먹이 · 밥그릇 · 방석 만들기). 비워 두면 먹이가 나오지 않는다")]
     private GameObject m_FoodBoxPrefab;
 
     [SerializeField, Tooltip("집 기준으로 먹이 상자를 놓을 위치. x는 밥그릇 반대쪽으로 자동으로 뒤집힌다. 평면 밖이면 다른 자리를 찾는다")]
     private Vector3 m_FoodBoxOffset = new Vector3(0.24f, 0f, 0.02f);
+
+    [SerializeField, Tooltip("방석 프리팹 (Tools › Here Kitty › 먹이 · 밥그릇 · 방석 만들기). 비워 두면 방석 없이 놓는다")]
+    private GameObject m_CushionPrefab;
+
+    [SerializeField, Tooltip("방석 제자리 후보 (집 기준). x가 양수면 먹이 상자 쪽. 위에서부터 평면 안이고 다른 물건과 안 겹치는 첫 자리")]
+    private Vector3[] m_CushionOffsets =
+    {
+        new Vector3(0.15f, 0f, -0.15f),
+        new Vector3(0.26f, 0f, -0.13f),
+        new Vector3(-0.13f, 0f, -0.14f),
+        new Vector3(0.12f, 0f, 0.23f),
+    };
 
     [Header("이벤트")]
     [SerializeField, Tooltip("다 놓은 뒤 실행. 고양이 Transform이 넘어온다")]
@@ -333,6 +345,47 @@ public class CatHousePlacer : MonoBehaviour
             var box = Spawn(m_FoodBoxPrefab, root, offset);
             if (wander != null && box.TryGetComponent(out FoodBox foodBox))
                 wander.AddObstacle(box.transform, foodBox.AvoidRadius);
+        }
+
+        PlaceCushion(root, cat, wander, -side);
+    }
+
+    /// <summary>
+    /// 먹이 상자 쪽(boxSide) 빈자리에 방석을 놓고 고양이와 연결한다.
+    /// 후보 자리 중 방석 테두리까지 걸어 다닐 영역 안이고, 집 · 밥그릇 · 상자와 겹치지 않는 첫 자리.
+    /// </summary>
+    private void PlaceCushion(Transform root, Transform cat, CatWander wander, float boxSide)
+    {
+        if (m_CushionPrefab == null || m_CushionOffsets == null || m_CushionOffsets.Length == 0)
+            return;
+
+        const float radius = 0.055f; // 방석 반지름 + 여유
+        var chosen = m_CushionOffsets[0];
+        foreach (var c in m_CushionOffsets)
+        {
+            var local = new Vector3(c.x * boxSide, c.y, c.z);
+            var p = root.TransformPoint(local);
+            bool clear = wander == null
+                || (wander.IsBlocked(p, null, radius) == false && wander.IsOnWalkableSurface(p)
+                    && wander.IsOnWalkableSurface(p + root.right * radius) && wander.IsOnWalkableSurface(p - root.right * radius)
+                    && wander.IsOnWalkableSurface(p + root.forward * radius) && wander.IsOnWalkableSurface(p - root.forward * radius));
+            if (clear)
+            {
+                chosen = local;
+                break;
+            }
+        }
+
+        var go = Spawn(m_CushionPrefab, root, chosen);
+        if (go.TryGetComponent(out Cushion cushion) == false)
+            return;
+        cushion.Init(root, wander);
+
+        if (cat != null)
+        {
+            if (cat.TryGetComponent(out CatSleeping sleeping) == false)
+                sleeping = cat.gameObject.AddComponent<CatSleeping>();
+            sleeping.SetCushion(cushion);
         }
     }
 

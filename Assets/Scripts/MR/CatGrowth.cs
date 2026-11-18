@@ -50,6 +50,9 @@ public class CatGrowth : MonoBehaviour
     [SerializeField, Range(0f, 1f), Tooltip("기분이 꽉 차 있지 않을 때 쓰다듬으면 게이지가 이만큼 더 오른다")]
     private float m_PetBonus = 0.05f;
 
+    [SerializeField, Range(0f, 1f), Tooltip("졸릴 때 방석을 가져다줘서 재우면 게이지가 이만큼 더 오른다")]
+    private float m_SleepBonus = 0.05f;
+
     [Header("단계")]
     [SerializeField, Tooltip("단계별 고양이 크기 (아기 · 어린이 · 어른)")]
     private float[] m_StageScales = { 0.06f, 0.08f, 0.1f };
@@ -68,6 +71,7 @@ public class CatGrowth : MonoBehaviour
     private CatNeeds m_Needs;
     private CatWander m_Wander;
     private CatEating m_Eating;
+    private CatSleeping m_Sleeping;
     private CatFace m_Face;
     private Animator m_Animator;
     private float m_BaseWalkSpeed;
@@ -110,6 +114,7 @@ public class CatGrowth : MonoBehaviour
         m_Needs = GetComponent<CatNeeds>();
         m_Wander = GetComponent<CatWander>();
         m_Eating = GetComponent<CatEating>();
+        m_Sleeping = GetComponent<CatSleeping>();
         m_Face = GetComponent<CatFace>();
         m_Animator = GetComponentInChildren<Animator>();
     }
@@ -130,7 +135,7 @@ public class CatGrowth : MonoBehaviour
     {
         if (needed == false || m_Complete || m_StageUpPending)
             return;
-        float bonus = kind == CareKind.Feed ? m_FeedBonus : m_PetBonus;
+        float bonus = kind == CareKind.Feed ? m_FeedBonus : (kind == CareKind.Pet ? m_PetBonus : m_SleepBonus);
         AddProgress(bonus);
         Log($"돌봄 보너스 {kind} +{bonus:0.00} → {m_Progress:0.00}");
     }
@@ -176,6 +181,8 @@ public class CatGrowth : MonoBehaviour
         if (m_Needs.IsSleeping)
             return false;
         if (m_Eating != null && m_Eating.IsBusy)
+            return false;
+        if (m_Sleeping != null && m_Sleeping.IsBusy)
             return false;
         if (m_Wander != null && m_Wander.IsPaused)
             return false;
@@ -278,4 +285,5 @@ public enum CareKind
 {
     Feed,
     Pet,
+    Sleep,
 }

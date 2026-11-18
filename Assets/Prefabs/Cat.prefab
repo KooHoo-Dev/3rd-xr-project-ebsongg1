@@ -255,6 +255,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 8477643386457636440, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
       insertIndex: -1
       addedObject: {fileID: 92390052207818538}
+    - targetCorrespondingSourceObject: {fileID: 8477643386457636440, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 546239520882586284}
   m_SourcePrefab: {fileID: 100100000, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
 --- !u!1 &833411898297022546 stripped
 GameObject:
@@ -345,6 +348,7 @@ MonoBehaviour:
   m_FeedHunger: 0.5
   m_FeedMood: 0.1
   m_PetMood: 0.15
+  m_ExhaustedMoodPenalty: 0.15
 --- !u!114 &6040651158965211929
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -428,6 +432,7 @@ MonoBehaviour:
   m_SpeedMultiplier: 1
   m_FeedBonus: 0.05
   m_PetBonus: 0.05
+  m_SleepBonus: 0.05
   m_StageScales:
   - 0.06
   - 0.08
@@ -476,6 +481,27 @@ MonoBehaviour:
   m_VanishTime: 1
   m_TurnSpeed: 240
   m_DefaultActionTime: 2
+  m_DebugLog: 0
+--- !u!114 &546239520882586284
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 833411898297022546}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7898d6020f0e8048aad16b7bff02be4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatSleeping
+  m_OfferDistance: 0.25
+  m_FitMargin: 1.2
+  m_FitWait: 0.35
+  m_EdgeGap: 0.012
+  m_HopTime: 0.4
+  m_HopHeight: 0.03
+  m_RecoveryMultiplier: 1.5
+  m_TurnSpeed: 240
   m_DebugLog: 0
 --- !u!4 &2217083931582381353 stripped
 Transform:

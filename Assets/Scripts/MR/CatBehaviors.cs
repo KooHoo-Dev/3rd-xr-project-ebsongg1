@@ -61,6 +61,7 @@ public class CatBehaviors : MonoBehaviour
     private CatWander m_Wander;
     private CatEating m_Eating;
     private CatGrowth m_Growth;
+    private CatSleeping m_Sleeping;
     private CatFace m_Face;
 
     private Action m_Current = Action.None;
@@ -83,6 +84,7 @@ public class CatBehaviors : MonoBehaviour
         m_Wander = GetComponent<CatWander>();
         m_Eating = GetComponent<CatEating>();
         m_Growth = GetComponent<CatGrowth>();
+        m_Sleeping = GetComponent<CatSleeping>();
         m_Face = GetComponent<CatFace>();
         ScheduleIdleAction();
     }
@@ -146,6 +148,8 @@ public class CatBehaviors : MonoBehaviour
         if (m_Needs.IsSleeping)
             return false;
         if (m_Eating != null && m_Eating.IsBusy)
+            return false;
+        if (m_Sleeping != null && m_Sleeping.IsBusy)
             return false;
         if (m_Growth != null && m_Growth.IsStageUpPending)
             return false;

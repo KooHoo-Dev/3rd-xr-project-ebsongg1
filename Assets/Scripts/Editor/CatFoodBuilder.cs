@@ -5,14 +5,16 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
 
 /// <summary>
-/// 메뉴 [Tools > Here Kitty > 먹이 · 밥그릇 만들기] 한 번으로 먹이 · 밥그릇 · 먹이 상자 프리팹을 만든다.
+/// 메뉴 [Tools > Here Kitty > 먹이 · 밥그릇 · 방석 만들기] 한 번으로 먹이 · 밥그릇 · 먹이 상자 · 방석 프리팹을 만든다.
 ///
 /// - Assets/Prefabs/Food.prefab: 말린 생선(Dried_fish)을 길이 k_FoodLength로 맞추고
 ///   Rigidbody + BoxCollider + XRGrabInteractable + CatFood를 붙인다. 컨트롤러 그립으로 잡는다.
 /// - Assets/Prefabs/FoodBowl.prefab: Unity 기본 도형으로 만든 작은 밥그릇.
 ///   XRSocketInteractor + 트리거 구 + FoodBowl.
 /// - Assets/Prefabs/FoodBox.prefab: 먹이가 톡 튀어나오는 나무 상자 (윗면이 열려 있음). FoodBox + 상자 충돌체.
-/// - 씬에 CatHousePlacer가 있으면 Bowl Prefab · Food Box Prefab 칸에 자동으로 넣는다.
+/// - Assets/Prefabs/Cushion.prefab: 납작한 원기둥 방석 (윗면 쿠션 + 테두리). kinematic Rigidbody + BoxCollider
+///   + XRGrabInteractable(던지기 없음) + Cushion. 위치는 Cushion 스크립트가 정리한다.
+/// - 씬에 CatHousePlacer가 있으면 Bowl · Food Box · Cushion Prefab 칸에 자동으로 넣는다.
 /// 다시 실행하면 같은 경로의 프리팹을 덮어쓴다. 크기나 색은 아래 상수를 바꾸고 다시 실행하면 된다.
 /// </summary>
 public static class CatFoodBuilder
@@ -22,6 +24,7 @@ public static class CatFoodBuilder
     private const string k_FoodPath = k_PrefabFolder + "/Food.prefab";
     private const string k_BowlPath = k_PrefabFolder + "/FoodBowl.prefab";
     private const string k_BoxPath = k_PrefabFolder + "/FoodBox.prefab";
+    private const string k_CushionPath = k_PrefabFolder + "/Cushion.prefab";
     private const string k_FishPath = "Assets/99. External Assets/Assets/Suriyun/Pspsps/Prefab/Accessory/Dried_fish.prefab";
 
     // 크기 (미터). 고양이 크기 0.06(아기) 기준
@@ -32,14 +35,18 @@ public static class CatFoodBuilder
     private const float k_SocketRadius = 0.06f;  // 먹이를 이 거리 안으로 가져가면 끌어당긴다
     private static readonly Vector3 k_BoxSize = new Vector3(0.07f, 0.03f, 0.055f); // 먹이 상자 가로 · 높이 · 세로
     private const float k_BoxThick = 0.004f;     // 상자 판 두께
+    private const float k_CushionRadius = 0.045f; // 방석 반지름 (고양이가 올라갈 때 몸에 맞춰 커진다)
+    private const float k_CushionHeight = 0.016f; // 방석 윗면 높이 (고양이가 올라서는 높이)
 
     // 색
     private static readonly Color k_BowlColor = new Color(0.45f, 0.70f, 0.90f);   // 하늘색
     private static readonly Color k_InsideColor = new Color(0.95f, 0.95f, 0.92f); // 그릇 안쪽 (흰색)
     private static readonly Color k_BoxColor = new Color(0.78f, 0.58f, 0.38f);    // 나무
     private static readonly Color k_BoxInsideColor = new Color(0.55f, 0.38f, 0.24f); // 상자 안쪽 (어두운 나무)
+    private static readonly Color k_CushionRimColor = new Color(0.62f, 0.55f, 0.85f); // 방석 테두리 (라벤더)
+    private static readonly Color k_CushionTopColor = new Color(0.86f, 0.82f, 0.97f); // 방석 윗면 (연한 라벤더)
 
-    [MenuItem("Tools/Here Kitty/먹이 · 밥그릇 만들기")]
+    [MenuItem("Tools/Here Kitty/먹이 · 밥그릇 · 방석 만들기")]
     public static void Build()
     {
         EnsureFolder(k_PrefabFolder);
@@ -50,12 +57,54 @@ public static class CatFoodBuilder
             return;
         var bowl = BuildBowl();
         var box = BuildBox(food);
+        var cushion = BuildCushion();
 
-        AssignToPlacer(bowl, box);
+        AssignToPlacer(bowl, box, cushion);
         AssetDatabase.SaveAssets();
-        Selection.activeObject = box;
-        EditorGUIUtility.PingObject(box);
-        Debug.Log($"[CatFoodBuilder] 먹이 · 밥그릇 · 먹이 상자 프리팹을 만들었어요: {k_FoodPath}, {k_BowlPath}, {k_BoxPath}");
+        Selection.activeObject = cushion;
+        EditorGUIUtility.PingObject(cushion);
+        Debug.Log($"[CatFoodBuilder] 먹이 · 밥그릇 · 먹이 상자 · 방석 프리팹을 만들었어요: {k_FoodPath}, {k_BowlPath}, {k_BoxPath}, {k_CushionPath}");
+    }
+
+    /// <summary>
+    /// 방석: 테두리(원기둥) 위에 살짝 작은 윗면(원기둥)을 얹어 폭신해 보이게 한다. 바닥이 y = 0, 윗면이 k_CushionHeight.
+    /// 잡기용 BoxCollider 하나만 남긴다. Rigidbody는 kinematic (떨어지지 않음, 위치는 Cushion이 정리).
+    /// </summary>
+    private static GameObject BuildCushion()
+    {
+        var rimMat = MakeMaterial("Cushion_Rim", k_CushionRimColor);
+        var topMat = MakeMaterial("Cushion_Top", k_CushionTopColor);
+
+        var root = new GameObject("Cushion");
+        float d = k_CushionRadius * 2f;
+        float rimH = k_CushionHeight * 0.75f;
+        AddCylinder(root, "Rim", new Vector3(0f, rimH * 0.5f, 0f), new Vector3(d, rimH, d), rimMat);
+        float topH = k_CushionHeight - rimH;
+        // 윗면은 테두리에 반쯤 묻혀서 맨 위가 정확히 k_CushionHeight가 되게 (rimH - topH ~ rimH + topH)
+        AddCylinder(root, "Top", new Vector3(0f, rimH, 0f), new Vector3(d * 0.86f, topH * 2f, d * 0.86f), topMat);
+
+        var box = root.AddComponent<BoxCollider>();
+        box.center = new Vector3(0f, k_CushionHeight * 0.5f, 0f);
+        box.size = new Vector3(d, k_CushionHeight, d);
+
+        var body = root.AddComponent<Rigidbody>();
+        body.isKinematic = true;
+        body.useGravity = false;
+
+        var grab = root.AddComponent<XRGrabInteractable>();
+        grab.movementType = XRBaseInteractable.MovementType.Instantaneous;
+        grab.throwOnDetach = false;
+        grab.useDynamicAttach = true;
+
+        var cushion = root.AddComponent<Cushion>();
+        var so = new SerializedObject(cushion);
+        so.FindProperty("m_BaseRadius").floatValue = k_CushionRadius;
+        so.FindProperty("m_Height").floatValue = k_CushionHeight;
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        var prefab = PrefabUtility.SaveAsPrefabAsset(root, k_CushionPath);
+        Object.DestroyImmediate(root);
+        return prefab;
     }
 
     private static GameObject BuildFood()
@@ -232,7 +281,7 @@ public static class CatFoodBuilder
         AssetDatabase.CreateFolder(parent, Path.GetFileName(path));
     }
 
-    private static void AssignToPlacer(GameObject bowlPrefab, GameObject boxPrefab)
+    private static void AssignToPlacer(GameObject bowlPrefab, GameObject boxPrefab, GameObject cushionPrefab)
     {
         var placer = Object.FindFirstObjectByType<CatHousePlacer>();
         if (placer == null)
@@ -240,8 +289,9 @@ public static class CatFoodBuilder
         var so = new SerializedObject(placer);
         so.FindProperty("m_BowlPrefab").objectReferenceValue = bowlPrefab;
         so.FindProperty("m_FoodBoxPrefab").objectReferenceValue = boxPrefab;
+        so.FindProperty("m_CushionPrefab").objectReferenceValue = cushionPrefab;
         so.ApplyModifiedProperties();
         EditorUtility.SetDirty(placer);
-        Debug.Log("[CatFoodBuilder] 씬의 CatHousePlacer > Bowl Prefab · Food Box Prefab 칸에 연결했어요. 씬을 저장하세요.");
+        Debug.Log("[CatFoodBuilder] 씬의 CatHousePlacer > Bowl · Food Box · Cushion Prefab 칸에 연결했어요. 씬을 저장하세요.");
     }
 }

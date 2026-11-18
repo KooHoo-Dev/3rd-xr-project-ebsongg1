@@ -76,6 +76,7 @@ public class CatPetting : MonoBehaviour
     private CatEating m_Eating;
     private CatGrowth m_Growth;
     private CatBehaviors m_Behaviors;
+    private CatSleeping m_Sleeping;
     private float m_Stroke;
     private float m_CooldownUntil;
     private float m_ResumeWanderAt = -1f;
@@ -92,6 +93,7 @@ public class CatPetting : MonoBehaviour
         m_Eating = GetComponent<CatEating>();
         m_Growth = GetComponent<CatGrowth>();
         m_Behaviors = GetComponent<CatBehaviors>();
+        m_Sleeping = GetComponent<CatSleeping>();
         m_Head = FindChild(transform, "head");
         if (m_Head == null)
         {
@@ -161,7 +163,8 @@ public class CatPetting : MonoBehaviour
             return;
 
         // 먹으러 가거나 먹는 중 · 다른 동작(인사 · 땅 파기 등) 중이면 웃는 얼굴만 보여 주고, 동작 · 돌아다니기는 건드리지 않는다.
-        if ((m_Eating != null && m_Eating.IsBusy) || (m_Behaviors != null && m_Behaviors.IsBusy))
+        if ((m_Eating != null && m_Eating.IsBusy) || (m_Behaviors != null && m_Behaviors.IsBusy)
+            || (m_Sleeping != null && m_Sleeping.IsBusy))
         {
             if (m_Face != null)
                 m_Face.Show(CatExpression.Happy, m_ReactionTime);

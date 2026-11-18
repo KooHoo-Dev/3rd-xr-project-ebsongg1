@@ -247,6 +247,10 @@ public static class CatAnimatorBuilder
         if (root.GetComponent<CatBehaviors>() == null)
             root.AddComponent<CatBehaviors>();
 
+        // 방석에 올라가 자기
+        if (root.GetComponent<CatSleeping>() == null)
+            root.AddComponent<CatSleeping>();
+
         // 머리 위 성장 게이지 · 상태값 아이콘. 단계 이름은 한글 글꼴로
         var icons = root.GetComponent<CatNeedsIcons>();
         if (icons == null)

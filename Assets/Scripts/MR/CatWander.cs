@@ -154,6 +154,16 @@ public class CatWander : MonoBehaviour
             m_Obstacles.Add(new Obstacle { transform = obstacle, radius = radius });
     }
 
+    /// <summary>등록한 장애물의 반지름을 바꾼다. (방석이 고양이 크기에 맞춰 커질 때)</summary>
+    public void SetObstacleRadius(Transform obstacle, float radius)
+    {
+        for (int i = 0; i < m_Obstacles.Count; i++)
+        {
+            if (m_Obstacles[i].transform == obstacle)
+                m_Obstacles[i] = new Obstacle { transform = obstacle, radius = radius };
+        }
+    }
+
     /// <summary>돌아다니기를 멈춘다. 다른 동작(먹기 · 쓰다듬기 등)을 하기 전에 부른다.</summary>
     public void Pause()
     {
@@ -373,10 +383,29 @@ public class CatWander : MonoBehaviour
         StartWalk(pos + RandomizedDirection(pos - point) * UnityEngine.Random.Range(m_WalkDistance.x, m_WalkDistance.y));
     }
 
-    /// <summary>점이 고양이 집이나 등록된 장애물(밥그릇 · 먹이 상자) 자리인지. 엔딩에서 떠날 길을 고를 때 쓴다.</summary>
-    public bool IsBlocked(Vector3 worldPoint)
+    /// <summary>
+    /// 점이 고양이 집이나 등록된 장애물(밥그릇 · 먹이 상자 · 방석) 자리인지. 엔딩에서 떠날 길, 방석 놓을 자리를 고를 때 쓴다.
+    /// ignore는 검사에서 뺄 장애물(방석이 자기 자신을 피하지 않게), clearance는 그만큼 더 넓게 본다 (m).
+    /// </summary>
+    public bool IsBlocked(Vector3 worldPoint, Transform ignore = null, float clearance = 0f)
     {
-        return IsInsideHouse(worldPoint) || TryGetObstacleAt(worldPoint, out _);
+        if (m_Home != null)
+        {
+            var local = m_Home.InverseTransformPoint(worldPoint);
+            if (Mathf.Abs(local.x) < m_HouseHalfSize.x + clearance && Mathf.Abs(local.z) < m_HouseHalfSize.y + clearance)
+                return true;
+        }
+        foreach (var o in m_Obstacles)
+        {
+            if (o.transform == null || o.transform == ignore || o.transform.gameObject.activeInHierarchy == false)
+                continue;
+            var offset = worldPoint - o.transform.position;
+            offset.y = 0f;
+            float r = o.radius + clearance;
+            if (offset.sqrMagnitude < r * r)
+                return true;
+        }
+        return false;
     }
 
     /// <summary>점이 돌아다녀도 되는 바닥(평면 테두리 안) 위인지</summary>
@@ -390,7 +419,7 @@ public class CatWander : MonoBehaviour
     {
         foreach (var o in m_Obstacles)
         {
-            if (o.transform == null)
+            if (o.transform == null || o.transform.gameObject.activeInHierarchy == false)
                 continue;
             var offset = worldPoint - o.transform.position;
             offset.y = 0f;
