@@ -14,6 +14,13 @@ using UnityEngine.XR.ARFoundation;
 /// 5. 장애물: 한 발 앞이 AddObstacle()로 등록한 물체(밥그릇 · 먹이 상자) 근처면 그 반대쪽으로 돌아선다
 /// 도착하면 다시 1번으로.
 ///
+/// 걸어 다닐 영역
+/// - Begin() 때 평면 테두리 모양을 "집 앵커 기준 좌표"로 복사해 두고, 그 뒤로는 복사본만 쓴다.
+///   헤드셋을 벗었다 쓰는 등으로 Quest가 공간 위치를 다시 맞추면 평면과 앵커가 서로 어긋날 수 있는데,
+///   복사본은 집과 함께 움직이므로 고양이 · 집 · 걸어 다닐 영역이 항상 같이 맞는다.
+///   (실시간 평면을 쓰면 고양이가 "사방이 다 가장자리 밖"이 되어 제자리에서 멈칫만 반복했다)
+/// - 그래도 고양이가 영역 밖에 서 있게 되면 멈칫하는 대신 집 앞(또는 영역 가운데)으로 걸어 돌아온다.
+///
 /// 시작은 CatHousePlacer가 고양이를 놓은 직후 Begin()을 불러서 한다.
 /// 먹이 · 쓰다듬기 등 다른 동작을 할 때는 Pause() / Resume(), 특정 위치로 보낼 때는 MoveTo()를 쓴다.
 ///
@@ -72,7 +79,10 @@ public class CatWander : MonoBehaviour
     private readonly List<Obstacle> m_Obstacles = new List<Obstacle>();
     private Animator m_Animator;
     private CatFace m_Face;
-    private ARPlane m_Plane;
+    private readonly List<Vector2> m_Area = new List<Vector2>(); // 걸어 다닐 영역 테두리 (집 앵커 기준 x · z)
+    private Vector2 m_AreaCenter;   // 영역 가운데 (집 앵커 기준 x · z)
+    private Vector3 m_HomeSpot;     // 처음 놓인 자리 (집 앵커 기준)
+    private bool m_Returning;       // 영역 밖에서 돌아오는 중
     private Transform m_Home;
     private State m_State = State.Waiting;
     private float m_Timer;
@@ -106,9 +116,35 @@ public class CatWander : MonoBehaviour
     /// <summary>돌아다니기 시작. plane은 고양이가 놓인 평면, home은 집이 붙은 앵커.</summary>
     public void Begin(ARPlane plane, Transform home)
     {
-        m_Plane = plane;
         m_Home = home;
+        if (home != null)
+            m_HomeSpot = home.InverseTransformPoint(transform.position);
+        SnapshotArea(plane);
         StartRest();
+    }
+
+    /// <summary>평면 테두리를 집 앵커 기준 좌표로 복사한다. 평면 정보가 없으면 비워 두고 집 주변 반경을 쓴다.</summary>
+    private void SnapshotArea(ARPlane plane)
+    {
+        m_Area.Clear();
+        m_AreaCenter = Vector2.zero;
+        if (plane == null || m_Home == null)
+            return;
+        var boundary = plane.boundary;
+        if (boundary.IsCreated == false || boundary.Length < 3)
+            return;
+
+        foreach (var b in boundary)
+        {
+            // 평면 테두리는 평면 기준 (x, z) 좌표 → 월드 → 집 앵커 기준
+            var world = plane.transform.TransformPoint(new Vector3(b.x, 0f, b.y));
+            var local = m_Home.InverseTransformPoint(world);
+            var p = new Vector2(local.x, local.z);
+            m_Area.Add(p);
+            m_AreaCenter += p;
+        }
+        m_AreaCenter /= m_Area.Count;
+        Log($"걸어 다닐 영역 복사: 꼭짓점 {m_Area.Count}개");
     }
 
     /// <summary>피해 다닐 물체를 등록한다. radius는 물체 가운데에서 수평 반지름 (m)</summary>
@@ -125,6 +161,7 @@ public class CatWander : MonoBehaviour
             return;
         m_State = State.Paused;
         m_ForcedMove = false;
+        m_Returning = false;
         m_OnArrived = null;
     }
 
@@ -146,6 +183,7 @@ public class CatWander : MonoBehaviour
         if (m_State == State.Waiting)
             return;
         m_ForcedMove = true;
+        m_Returning = false;
         m_OnArrived = onArrived;
         StartWalk(worldPoint);
     }
@@ -201,7 +239,8 @@ public class CatWander : MonoBehaviour
         if (m_ForcedMove == false)
         {
             var ahead = pos + forward * m_EdgeMargin;
-            if (IsOnSurface(ahead) == false)
+            // 돌아오는 중에는 아직 영역 밖이니 가장자리 검사를 하지 않는다. (집 · 장애물은 피한다)
+            if (m_Returning == false && IsOnSurface(ahead) == false)
             {
                 StartAlert();
                 return;
@@ -241,6 +280,13 @@ public class CatWander : MonoBehaviour
 
     private void StartAlert()
     {
+        // 이미 영역 밖에 서 있으면 멈칫해 봤자 갈 곳이 없다 → 돌아오기
+        if (IsOnSurface(transform.position) == false)
+        {
+            ReturnToArea();
+            return;
+        }
+
         m_State = State.Alerting;
         m_IsStepping = false;
         m_Timer = m_AlertTime;
@@ -263,7 +309,24 @@ public class CatWander : MonoBehaviour
             callback?.Invoke();
             return;
         }
+        m_Returning = false;
         StartRest();
+    }
+
+    /// <summary>
+    /// 영역 밖에 서 있을 때: 처음 놓인 자리(집 앞)로 걸어 돌아온다. 그 자리도 영역 밖이면 영역 가운데로.
+    /// </summary>
+    private void ReturnToArea()
+    {
+        var target = transform.position;
+        if (m_Home != null)
+        {
+            var homeSpot = m_Home.TransformPoint(m_HomeSpot);
+            target = IsOnSurface(homeSpot) ? homeSpot : m_Home.TransformPoint(new Vector3(m_AreaCenter.x, 0f, m_AreaCenter.y));
+        }
+        m_Returning = true;
+        Log("영역 밖! 돌아오는 중");
+        StartWalk(target);
     }
 
     /// <summary>
@@ -273,6 +336,12 @@ public class CatWander : MonoBehaviour
     private void PickNewTarget()
     {
         var pos = transform.position;
+        if (IsOnSurface(pos) == false)
+        {
+            ReturnToArea();
+            return;
+        }
+
         bool curious = UnityEngine.Random.value < m_EdgeCuriosity;
         Vector3 target = pos;
         for (int i = 0; i < 10; i++)
@@ -293,7 +362,7 @@ public class CatWander : MonoBehaviour
     private void TurnAwayFromEdge()
     {
         var pos = transform.position;
-        var center = m_Plane != null ? m_Plane.center : (m_Home != null ? m_Home.position : pos);
+        var center = m_Home != null ? m_Home.TransformPoint(new Vector3(m_AreaCenter.x, 0f, m_AreaCenter.y)) : pos;
         StartWalk(pos + RandomizedDirection(center - pos) * UnityEngine.Random.Range(m_WalkDistance.x, m_WalkDistance.y));
     }
 
@@ -344,11 +413,29 @@ public class CatWander : MonoBehaviour
         return Quaternion.Euler(0f, UnityEngine.Random.Range(-50f, 50f), 0f) * flat;
     }
 
-    /// <summary>점이 돌아다녀도 되는 바닥 위인지. 평면이 있으면 평면 테두리, 없으면 집에서 일정 반경.</summary>
+    /// <summary>점이 다각형 안에 있는지 (짝홀 규칙: 오른쪽으로 선을 그어 테두리를 홀수 번 지나면 안쪽)</summary>
+    private static bool IsInsidePolygon(Vector2 p, List<Vector2> polygon)
+    {
+        bool inside = false;
+        for (int i = 0, j = polygon.Count - 1; i < polygon.Count; j = i++)
+        {
+            var a = polygon[i];
+            var b = polygon[j];
+            if ((a.y > p.y) != (b.y > p.y) &&
+                p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x)
+                inside = (inside == false);
+        }
+        return inside;
+    }
+
+    /// <summary>점이 돌아다녀도 되는 바닥 위인지. 복사해 둔 영역이 있으면 그 안, 없으면 집에서 일정 반경.</summary>
     private bool IsOnSurface(Vector3 worldPoint)
     {
-        if (m_Plane != null)
-            return CatHousePlacer.IsInsideBoundary(m_Plane, worldPoint);
+        if (m_Home != null && m_Area.Count >= 3)
+        {
+            var local = m_Home.InverseTransformPoint(worldPoint);
+            return IsInsidePolygon(new Vector2(local.x, local.z), m_Area);
+        }
         if (m_Home != null)
             return Flat(worldPoint - m_Home.position).magnitude < m_HomeRadius;
         return true;

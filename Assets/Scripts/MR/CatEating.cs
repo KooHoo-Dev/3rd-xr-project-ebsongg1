@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.XR.ARFoundation;
 
 /// <summary>
 /// 밥그릇에 먹이가 들어오면 고양이가 걸어가서 먹는다.
@@ -48,7 +47,6 @@ public class CatEating : MonoBehaviour
     private CatGrowth m_Growth;
     private CatBehaviors m_Behaviors;
     private FoodBowl m_Bowl;
-    private ARPlane m_Plane;
     private State m_State = State.Idle;
     private float m_Timer;
     private float m_HungerAmount = -1f;
@@ -107,13 +105,6 @@ public class CatEating : MonoBehaviour
                 return;
             m_Needs.WakeUp();
             Log("먹이 냄새에 깸");
-        }
-
-        if (m_Plane == null)
-        {
-            var placer = FindFirstObjectByType<CatHousePlacer>();
-            if (placer != null)
-                m_Plane = placer.PlacedPlane;
         }
 
         m_EatPoint = FindEatPoint();
@@ -233,7 +224,8 @@ public class CatEating : MonoBehaviour
             float angle = ((i + 1) / 2) * 45f * (i % 2 == 0 ? 1f : -1f);
             var point = bowl + Quaternion.Euler(0f, angle, 0f) * dir * distance;
             point.y = bowl.y;
-            bool onPlane = m_Plane == null || CatHousePlacer.IsInsideBoundary(m_Plane, point);
+            // 걸어 다닐 영역은 CatWander가 집 기준으로 복사해 둔 것을 쓴다. (공간 위치가 다시 맞춰져도 집과 어긋나지 않게)
+            bool onPlane = m_Wander == null || m_Wander.IsOnWalkableSurface(point);
             bool clearOfHouse = home == null || IsClearOfHouse(home, point);
             if (onPlane && clearOfHouse)
                 return point;
