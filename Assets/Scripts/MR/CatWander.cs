@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.XR.ARFoundation;
 
@@ -10,6 +11,7 @@ using UnityEngine.XR.ARFoundation;
 /// 2. 걷기: 랜덤 방향 · 거리로 목표를 정하고 몸을 돌린 뒤 걸어간다 (Speed = 1)
 /// 3. 가장자리: 한 발 앞(m_EdgeMargin)이 평면 테두리 밖이면 멈추고 Alert(멈칫) → 평면 안쪽으로 돌아선다
 /// 4. 집: 한 발 앞이 고양이 집 자리면 멈칫 없이 집 반대쪽으로 돌아선다
+/// 5. 장애물: 한 발 앞이 AddObstacle()로 등록한 물체(밥그릇 · 먹이 상자) 근처면 그 반대쪽으로 돌아선다
 /// 도착하면 다시 1번으로.
 ///
 /// 시작은 CatHousePlacer가 고양이를 놓은 직후 Begin()을 불러서 한다.
@@ -61,6 +63,13 @@ public class CatWander : MonoBehaviour
     private static readonly int s_SpeedHash = Animator.StringToHash("Speed");
     private static readonly int s_AlertHash = Animator.StringToHash("Alert");
 
+    private struct Obstacle
+    {
+        public Transform transform;
+        public float radius;
+    }
+
+    private readonly List<Obstacle> m_Obstacles = new List<Obstacle>();
     private Animator m_Animator;
     private CatFace m_Face;
     private ARPlane m_Plane;
@@ -97,6 +106,13 @@ public class CatWander : MonoBehaviour
         m_Plane = plane;
         m_Home = home;
         StartRest();
+    }
+
+    /// <summary>피해 다닐 물체를 등록한다. radius는 물체 가운데에서 수평 반지름 (m)</summary>
+    public void AddObstacle(Transform obstacle, float radius)
+    {
+        if (obstacle != null)
+            m_Obstacles.Add(new Obstacle { transform = obstacle, radius = radius });
     }
 
     /// <summary>돌아다니기를 멈춘다. 다른 동작(먹기 · 쓰다듬기 등)을 하기 전에 부른다.</summary>
@@ -189,7 +205,12 @@ public class CatWander : MonoBehaviour
             }
             if (IsInsideHouse(ahead))
             {
-                TurnAwayFromHouse();
+                TurnAwayFrom(m_Home.position);
+                return;
+            }
+            if (TryGetObstacleAt(ahead, out var obstacle))
+            {
+                TurnAwayFrom(obstacle.position);
                 return;
             }
         }
@@ -256,7 +277,7 @@ public class CatWander : MonoBehaviour
             float angle = UnityEngine.Random.Range(0f, 360f);
             var dir = Quaternion.Euler(0f, angle, 0f) * Vector3.forward;
             target = pos + dir * UnityEngine.Random.Range(m_WalkDistance.x, m_WalkDistance.y);
-            if (IsInsideHouse(target))
+            if (IsInsideHouse(target) || TryGetObstacleAt(target, out _))
                 continue;
             if (curious || IsOnSurface(target + dir * m_EdgeMargin))
                 break;
@@ -273,12 +294,30 @@ public class CatWander : MonoBehaviour
         StartWalk(pos + RandomizedDirection(center - pos) * UnityEngine.Random.Range(m_WalkDistance.x, m_WalkDistance.y));
     }
 
-    /// <summary>집에 부딪히기 전에 집 반대쪽으로 돌아선다.</summary>
-    private void TurnAwayFromHouse()
+    /// <summary>집 · 장애물에 부딪히기 전에 그 반대쪽으로 돌아선다.</summary>
+    private void TurnAwayFrom(Vector3 point)
     {
         var pos = transform.position;
-        var away = m_Home != null ? pos - m_Home.position : -transform.forward;
-        StartWalk(pos + RandomizedDirection(away) * UnityEngine.Random.Range(m_WalkDistance.x, m_WalkDistance.y));
+        StartWalk(pos + RandomizedDirection(pos - point) * UnityEngine.Random.Range(m_WalkDistance.x, m_WalkDistance.y));
+    }
+
+    /// <summary>점이 등록된 장애물 반경 안에 있으면 그 장애물을 돌려준다.</summary>
+    private bool TryGetObstacleAt(Vector3 worldPoint, out Transform obstacle)
+    {
+        foreach (var o in m_Obstacles)
+        {
+            if (o.transform == null)
+                continue;
+            var offset = worldPoint - o.transform.position;
+            offset.y = 0f;
+            if (offset.sqrMagnitude < o.radius * o.radius)
+            {
+                obstacle = o.transform;
+                return true;
+            }
+        }
+        obstacle = null;
+        return false;
     }
 
     /// <summary>방향을 수평으로 만들고 ±50도 안에서 살짝 비튼다.</summary>

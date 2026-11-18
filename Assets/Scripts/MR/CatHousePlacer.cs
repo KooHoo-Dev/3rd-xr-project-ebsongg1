@@ -51,6 +51,18 @@ public class CatHousePlacer : MonoBehaviour
     [SerializeField, Tooltip("집 기준으로 고양이를 놓을 위치 (집 문 앞, 책상 높이)")]
     Vector3 m_CatOffset = new Vector3(0f, 0f, 0.105f);
 
+    [SerializeField, Tooltip("밥그릇 프리팹 (Tools › Here Kitty › 먹이 · 밥그릇 만들기). 비워 두면 밥그릇 없이 놓는다")]
+    private GameObject m_BowlPrefab;
+
+    [SerializeField, Tooltip("집 기준으로 밥그릇을 놓을 위치. 평면 밖이면 반대쪽(x 뒤집기)에 놓는다")]
+    private Vector3 m_BowlOffset = new Vector3(0.13f, 0f, 0.04f);
+
+    [SerializeField, Tooltip("먹이 상자 프리팹 (Tools › Here Kitty › 먹이 · 밥그릇 만들기). 비워 두면 먹이가 나오지 않는다")]
+    private GameObject m_FoodBoxPrefab;
+
+    [SerializeField, Tooltip("집 기준으로 먹이 상자를 놓을 위치. x는 밥그릇 반대쪽으로 자동으로 뒤집힌다. 평면 밖이면 다른 자리를 찾는다")]
+    private Vector3 m_FoodBoxOffset = new Vector3(0.24f, 0f, 0.02f);
+
     [Header("이벤트")]
     [SerializeField, Tooltip("다 놓은 뒤 실행. 고양이 Transform이 넘어온다")]
     UnityEvent<Transform> m_Placed;
@@ -263,6 +275,8 @@ public class CatHousePlacer : MonoBehaviour
             wander.Begin(plane, root);
         }
 
+        PlaceFeeding(plane, root);
+
         IsPlaced = true;
         PlacedPlane = plane;
         if (m_Reticle != null)
@@ -272,6 +286,75 @@ public class CatHousePlacer : MonoBehaviour
         SetPlanesVisible(false);
 
         m_Placed.Invoke(PlacedCat);
+    }
+
+    /// <summary>
+    /// 집 한쪽에 밥그릇, 반대쪽 조금 떨어진 곳에 먹이 상자를 놓는다.
+    /// 플레이어가 상자에서 먹이를 꺼내 집 건너편 밥그릇까지 옮기게 하려는 배치.
+    /// 둘 다 고양이가 피해 다니도록 등록하고, 밥그릇은 고양이와 연결한다.
+    /// </summary>
+    private void PlaceFeeding(ARPlane plane, Transform root)
+    {
+        var cat = PlacedCat;
+        var wander = cat != null ? cat.GetComponent<CatWander>() : null;
+        float side = 1f; // 밥그릇이 놓인 쪽 (+x 또는 -x)
+
+        if (m_BowlPrefab != null)
+        {
+            var offset = PickOffset(plane, root,
+                m_BowlOffset,
+                Mirror(m_BowlOffset));
+            side = Mathf.Sign(offset.x == 0f ? 1f : offset.x);
+
+            var bowl = Spawn(m_BowlPrefab, root, offset);
+            if (bowl.TryGetComponent(out FoodBowl foodBowl))
+            {
+                if (wander != null)
+                    wander.AddObstacle(bowl.transform, foodBowl.AvoidRadius);
+                if (cat != null)
+                {
+                    if (cat.TryGetComponent(out CatEating eating) == false)
+                        eating = cat.gameObject.AddComponent<CatEating>();
+                    foodBowl.SetCat(eating);
+                }
+            }
+        }
+
+        if (m_FoodBoxPrefab != null)
+        {
+            // 밥그릇 반대쪽 → 같은 쪽 더 멀리 → 집 앞쪽 순서로 평면 안인 자리를 찾는다.
+            var far = new Vector3(-side * Mathf.Abs(m_FoodBoxOffset.x), m_FoodBoxOffset.y, m_FoodBoxOffset.z);
+            var offset = PickOffset(plane, root,
+                far,
+                far * 0.75f,
+                new Vector3(side * (Mathf.Abs(m_BowlOffset.x) + 0.12f), m_FoodBoxOffset.y, m_BowlOffset.z),
+                new Vector3(-side * 0.08f, m_FoodBoxOffset.y, 0.2f));
+
+            var box = Spawn(m_FoodBoxPrefab, root, offset);
+            if (wander != null && box.TryGetComponent(out FoodBox foodBox))
+                wander.AddObstacle(box.transform, foodBox.AvoidRadius);
+        }
+    }
+
+    /// <summary>후보 중 평면 안인 첫 자리. 모두 밖이면 첫 후보.</summary>
+    private static Vector3 PickOffset(ARPlane plane, Transform root, params Vector3[] candidates)
+    {
+        foreach (var c in candidates)
+        {
+            if (IsInsideBoundary(plane, root.TransformPoint(c)))
+                return c;
+        }
+        return candidates[0];
+    }
+
+    private static Vector3 Mirror(Vector3 v) => new Vector3(-v.x, v.y, v.z);
+
+    private static GameObject Spawn(GameObject prefab, Transform root, Vector3 localPosition)
+    {
+        var go = Instantiate(prefab, root, false);
+        go.transform.localPosition = localPosition;
+        go.transform.localRotation = Quaternion.identity;
+        return go;
     }
 
     private void OnPlanesChanged(ARTrackablesChangedEventArgs<ARPlane> args)

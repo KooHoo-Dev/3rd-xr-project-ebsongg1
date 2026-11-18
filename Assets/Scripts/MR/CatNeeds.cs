@@ -64,6 +64,7 @@ public class CatNeeds : MonoBehaviour
     private Animator m_Animator;
     private CatWander m_Wander;
     private CatFace m_Face;
+    private CatEating m_Eating;
     private bool m_IsSleeping;
     private bool m_PausedWanderForSleep;
 
@@ -78,12 +79,15 @@ public class CatNeeds : MonoBehaviour
     public float Sleepiness => m_Sleepiness;
     public bool IsSleeping => m_IsSleeping;
     public bool IsHungry => m_Hunger >= m_HungryAt;
+    public bool IsSad => m_Mood <= m_SadMoodAt;
+    public bool IsSleepy => m_Sleepiness >= m_SleepyAt;
 
     private void Awake()
     {
         m_Animator = GetComponentInChildren<Animator>();
         m_Wander = GetComponent<CatWander>();
         m_Face = GetComponent<CatFace>();
+        m_Eating = GetComponent<CatEating>();
     }
 
     private void Update()
@@ -137,8 +141,8 @@ public class CatNeeds : MonoBehaviour
             return;
         }
 
-        // 다른 일(먹기 등)로 CatWander가 멈춰 있을 때는 그 일이 끝날 때까지 기다린다.
-        bool busy = m_Wander != null && m_Wander.IsPaused;
+        // 다른 일(먹기 등)로 CatWander가 멈춰 있거나 먹으러 가는 중일 때는 그 일이 끝날 때까지 기다린다.
+        bool busy = (m_Wander != null && m_Wander.IsPaused) || (m_Eating != null && m_Eating.IsBusy);
         if (m_Sleepiness >= m_FallAsleepAt && busy == false)
             SetSleeping(true);
     }

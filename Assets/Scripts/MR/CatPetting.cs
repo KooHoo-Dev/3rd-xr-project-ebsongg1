@@ -73,6 +73,7 @@ public class CatPetting : MonoBehaviour
     private CatNeeds m_Needs;
     private CatFace m_Face;
     private CatWander m_Wander;
+    private CatEating m_Eating;
     private float m_Stroke;
     private float m_CooldownUntil;
     private float m_ResumeWanderAt = -1f;
@@ -86,6 +87,7 @@ public class CatPetting : MonoBehaviour
         m_Needs = GetComponent<CatNeeds>();
         m_Face = GetComponent<CatFace>();
         m_Wander = GetComponent<CatWander>();
+        m_Eating = GetComponent<CatEating>();
         m_Head = FindChild(transform, "head");
         if (m_Head == null)
         {
@@ -150,6 +152,14 @@ public class CatPetting : MonoBehaviour
         // 자고 있으면 기분만 오르고 동작 · 표정은 그대로 (잠자는 얼굴이 우선)
         if (m_Needs != null && m_Needs.IsSleeping)
             return;
+
+        // 먹으러 가거나 먹는 중이면 웃는 얼굴만 보여 주고, 동작 · 돌아다니기는 건드리지 않는다.
+        if (m_Eating != null && m_Eating.IsBusy)
+        {
+            if (m_Face != null)
+                m_Face.Show(CatExpression.Happy, m_ReactionTime);
+            return;
+        }
 
         if (m_Face != null)
             m_Face.Show(CatExpression.Happy, m_ReactionTime);

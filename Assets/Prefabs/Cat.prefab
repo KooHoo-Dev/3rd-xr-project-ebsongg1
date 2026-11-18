@@ -92,6 +92,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 8477643386457636440, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6040651158965211929}
+    - targetCorrespondingSourceObject: {fileID: 8477643386457636440, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7869247789684621093}
   m_SourcePrefab: {fileID: 100100000, guid: ca7723b78d9cb3f4591d1de36bfaa445, type: 3}
 --- !u!1 &833411898297022546 stripped
 GameObject:
@@ -202,4 +205,24 @@ MonoBehaviour:
   m_ReactionTime: 2
   m_HapticAmplitude: 0.3
   m_HapticDuration: 0.1
+  m_EnterHapticAmplitude: 0.12
+  m_EnterHapticDuration: 0.03
   m_DrawGizmo: 1
+--- !u!114 &7869247789684621093
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 833411898297022546}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1030c74069ef85540a0f846ffc7c1532, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatEating
+  m_EatDistance: 0.06
+  m_EatTime: 3
+  m_TurnSpeed: 200
+  m_WakeUpForFood: 1
+  m_ReferenceScale: 0.06
+  m_DebugLog: 0

@@ -560,6 +560,10 @@ MonoBehaviour:
   m_CatPrefab: {fileID: 833411898297022546, guid: d708c57e7d2ff6746bbe35bde136af5f, type: 3}
   m_CatScale: 0.06
   m_CatOffset: {x: 0, y: 0, z: 0.105}
+  m_BowlPrefab: {fileID: 8859141427372622131, guid: 15a4122335861ea4aa2f1e4718ad72b5, type: 3}
+  m_BowlOffset: {x: 0.15, y: 0, z: 0.04}
+  m_FoodBoxPrefab: {fileID: 3613686922554886649, guid: 50b061152405cf04eab11c0d9d6aa9a8, type: 3}
+  m_FoodBoxOffset: {x: 0.24, y: 0, z: 0.02}
   m_Placed:
     m_PersistentCalls:
       m_Calls: []
