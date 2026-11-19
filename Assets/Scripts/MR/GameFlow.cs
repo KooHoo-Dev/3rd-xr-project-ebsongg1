@@ -12,9 +12,10 @@ using UnityEngine.UI;
 /// 2. Placing: 시작 버튼을 누르면 패널을 숨기고 배치를 켠다. 배치 안내 한 줄이 시선을 따라다닌다.
 /// 3. Raising: 집을 놓으면 안내를 숨기고 돌본 시간을 재기 시작한다.
 ///             처음 한 번씩 안내 한 줄을 띄운다 (같은 안내 칸을 다시 쓴다):
-///             집을 놓은 직후 → 쓰다듬기, 처음 배고플 때 → 먹이 주기, 처음 졸릴 때 → 방석으로 재우기.
+///             집을 놓은 직후 → 쓰다듬기, 배부름 막대가 노랗게 되면 → 먹이 주기, 처음 졸릴 때 → 방석으로 재우기.
 ///             그 행동을 하거나 m_HintDuration초가 지나면 사라진다. 이미 해 본 행동이면 건너뛴다.
 ///             간식 찾기(SnackHunt): 처음 숨겼을 때 → 바닥에서 찾아보기, 처음 집었을 때 → 고양이에게 가져다주기.
+///             먹이 · 재우기 안내가 뜨면 밥그릇 · 방석 위에 화살표(HintArrow)를 띄워 어떤 물건인지 알려 준다.
 ///             성장 단계가 오르면 같은 안내 칸에 축하 문구를 잠깐 띄운다. (떠 있던 안내는 끝나면 다시 보여 준다)
 /// 4. Ending : 고양이가 다 자라면 (CatGrowth.IsComplete) 돌본 시간을 멈추고, 먹이 상자 · 먹이를 치우고,
 ///             CatEnding 연출(탐험가 차림 → 인사 → 가장자리로 떠나기)을 재생한다.
@@ -75,13 +76,16 @@ public class GameFlow : MonoBehaviour
     [SerializeField] private string m_FeedHint = "배고파해요! 상자에서 생선을 <b>그립</b>으로 집어 밥그릇에 넣어 주세요";
     [SerializeField] private string m_SleepHint = "졸려해요! 방석을 <b>그립</b>으로 집어 고양이 옆에 놓아 주세요";
     [SerializeField] private string m_SnackFindText = "고양이가 간식을 숨겼어요! 바닥에서 <b>반짝이는 생선</b>을 찾아보세요";
-    [SerializeField] private string m_SnackGiveText = "찾았다! <b>고양이에게 직접</b> 가져다주세요";
+    [SerializeField] private string m_SnackPlaceText = "찾았다! 고양이 <b>바로 앞</b>에 내려놓아 주세요";
 
     [SerializeField, Tooltip("간식 찾기 안내는 찾을 때까지 이 시간 동안 띄운다 (초)")]
     private float m_SnackHintDuration = 40f;
 
     [SerializeField, Tooltip("집을 놓고 쓰다듬기 안내가 뜨기까지 (초)")]
     private float m_PetHintDelay = 2f;
+
+    [SerializeField, Range(0f, 1f), Tooltip("배고픔이 이만큼 오르면 먹이 안내를 띄운다. 0.4 = 배부름 막대가 노란색으로 바뀌는 때")]
+    private float m_FeedHintHunger = 0.4f;
 
     [SerializeField, Tooltip("행동을 안 해도 이 시간이 지나면 안내가 사라진다 (초)")]
     private float m_HintDuration = 20f;
@@ -108,6 +112,7 @@ public class GameFlow : MonoBehaviour
     private CatPetting m_CatPetting;
     private CatEating m_CatEating;
     private CatSleeping m_CatSleeping;
+    private HintArrow m_Arrow;
     private float m_PlaceTitleAt;
     private float m_RaisingStartTime;
     private float m_RaisingEndTime = -1f;
@@ -313,14 +318,14 @@ public class GameFlow : MonoBehaviour
             return;
         if (Time.time >= m_PetHintAt)
             TryShowCareHint(CareHint.Pet, m_PetHint);
-        if (m_ActiveHint < 0 && m_CatNeeds != null && m_CatNeeds.IsHungry)
+        if (m_ActiveHint < 0 && m_CatNeeds != null && m_CatNeeds.Hunger >= m_FeedHintHunger)
             TryShowCareHint(CareHint.Feed, m_FeedHint);
         if (m_ActiveHint < 0 && m_CatSleeping != null && m_CatNeeds != null && m_CatNeeds.IsSleepy && m_CatNeeds.IsSleeping == false)
             TryShowCareHint(CareHint.Sleep, m_SleepHint);
         if (m_ActiveHint < 0 && m_SnackHunt != null && m_SnackHunt.IsSnackHidden)
             TryShowCareHint(CareHint.SnackFind, m_SnackFindText, m_SnackHintDuration);
         if (m_ActiveHint < 0 && m_SnackHunt != null && m_SnackHunt.IsSnackHeld)
-            TryShowCareHint(CareHint.SnackGive, m_SnackGiveText);
+            TryShowCareHint(CareHint.SnackGive, m_SnackPlaceText);
     }
 
     /// <summary>duration이 0 이하면 m_HintDuration 동안 띄운다.</summary>
@@ -344,6 +349,7 @@ public class GameFlow : MonoBehaviour
         if (m_PlacementHint.gameObject.activeSelf == false)
             SnapInFront(m_PlacementHint, m_HintDistance, m_HintDrop);
         UIPop.Show(m_PlacementHint);
+        PointArrow(hint);
     }
 
     /// <summary>안내를 끝낸다. 축하 문구가 떠 있으면 그건 그대로 두고 끝날 때 함께 숨긴다.</summary>
@@ -352,6 +358,34 @@ public class GameFlow : MonoBehaviour
         m_ActiveHint = -1;
         if (m_NoticeUntil < 0f)
             UIPop.Hide(m_PlacementHint);
+        if (m_Arrow != null)
+            m_Arrow.Hide();
+    }
+
+    /// <summary>안내가 말하는 물건 위에 화살표를 띄운다. (먹이 → 밥그릇, 재우기 → 방석) 가리킬 게 없으면 숨긴다.</summary>
+    private void PointArrow(CareHint hint)
+    {
+        Transform target = null;
+        if (hint == CareHint.Feed)
+        {
+            var bowl = FindFirstObjectByType<FoodBowl>();
+            target = bowl != null ? bowl.transform : null;
+        }
+        else if (hint == CareHint.Sleep)
+        {
+            var cushion = FindFirstObjectByType<Cushion>();
+            target = cushion != null ? cushion.transform : null;
+        }
+
+        if (target == null)
+        {
+            if (m_Arrow != null)
+                m_Arrow.Hide();
+            return;
+        }
+        if (m_Arrow == null)
+            m_Arrow = HintArrow.Create("Hint Arrow");
+        m_Arrow.Show(target);
     }
 
     /// <summary>성장 단계가 오르면 안내 칸에 축하 문구를 잠깐 띄운다. (반짝 소리는 CatSounds가 낸다)</summary>

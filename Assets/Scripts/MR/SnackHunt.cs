@@ -16,7 +16,8 @@ using UnityEngine.XR.ARSubsystems;
 ///    조건에 맞는 곳이 없으면 각도 → 거리 순으로 조건을 풀어 가며 다시 찾는다.
 ///    바닥 평면이 하나도 없으면 XR Origin 높이(바닥)를 기준으로 플레이어 옆 뒤쪽에 둔다.
 /// 2. 찾기: 간식 위에 반짝이가 떠 있다. 플레이어가 그립으로 집으면 찾은 것 (FoundCount)
-/// 3. 건네주기: 간식을 고양이 가까이(m_GiveDistance) 가져가면 고양이가 돌아서 받아먹고(CatBehaviors.TakeSnack)
+/// 3. 건네주기: 간식을 고양이 앞(m_GiveDistance 안)에 내려놓으면 고양이가 돌아서 받아먹고(CatBehaviors.TakeSnack)
+///    손에 든 채 공중에 띄워 두면 먹지 않는다. 놓아서 책상 높이(m_PlacedHeight 안)까지 내려와야 한다.
 ///    다 먹으면 성장 보너스(CareKind.Snack) · 배부름 · 기분이 오르고 기뻐한다. (GivenCount)
 /// 4. 놓쳐서 바닥보다 m_FallDistance 아래로 떨어지면 숨겼던 자리로 되돌린다.
 ///
@@ -59,8 +60,11 @@ public class SnackHunt : MonoBehaviour
     private float m_FloorLift = 0.01f;
 
     [Header("건네주기")]
-    [SerializeField, Tooltip("간식을 고양이에게서 이 거리 안으로 가져가면 받아먹는다 (m). 고양이 크기 0.1(어른) 기준")]
+    [SerializeField, Tooltip("간식을 고양이에게서 이 거리(수평) 안에 내려놓으면 받아먹는다 (m). 고양이 크기 0.1(어른) 기준")]
     private float m_GiveDistance = 0.15f;
+
+    [SerializeField, Tooltip("고양이 발 높이에서 이 높이 안까지 내려와야 놓은 것으로 본다 (m). 고양이 크기 0.1 기준")]
+    private float m_PlacedHeight = 0.05f;
 
     [SerializeField, Tooltip("받아먹는 시간 (초)")]
     private float m_EatTime = 2.5f;
@@ -144,9 +148,11 @@ public class SnackHunt : MonoBehaviour
         if (HasSnack == false)
             return;
 
-        if (m_Snack.WasFound && IsNearCat(m_Snack.transform.position))
+        if (m_Snack.IsHeld)
+            return;
+        if (m_Snack.WasFound && IsPlacedNearCat(m_Snack.transform.position))
             TryGive();
-        else if (m_Snack.IsHeld == false)
+        else
             CheckFallen();
     }
 
@@ -311,11 +317,15 @@ public class SnackHunt : MonoBehaviour
         return Random.value < 0.5f ? -angle : angle;
     }
 
-    private bool IsNearCat(Vector3 point)
+    /// <summary>
+    /// 손에서 놓은 간식이 고양이 가까이 책상 높이까지 내려왔는지.
+    /// (책상에 떨어져 멈췄거나, 떨어지는 중에 책상 높이를 지나는 순간 모두 해당)
+    /// </summary>
+    private bool IsPlacedNearCat(Vector3 point)
     {
-        // 고양이 몸 가운데쯤 (발밑에서 조금 위)을 기준으로 잰다.
-        var center = m_Cat.position + Vector3.up * Scaled(m_GiveDistance * 0.4f);
-        return Vector3.Distance(point, center) < Scaled(m_GiveDistance);
+        if (Flat3(point - m_Cat.position).magnitude > Scaled(m_GiveDistance))
+            return false;
+        return point.y - m_Cat.position.y < Scaled(m_PlacedHeight);
     }
 
     private void TryGive()
