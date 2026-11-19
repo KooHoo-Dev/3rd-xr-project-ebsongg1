@@ -53,6 +53,9 @@ public class CatGrowth : MonoBehaviour
     [SerializeField, Range(0f, 1f), Tooltip("졸릴 때 방석을 가져다줘서 재우면 게이지가 이만큼 더 오른다")]
     private float m_SleepBonus = 0.05f;
 
+    [SerializeField, Range(0f, 1f), Tooltip("숨겨진 간식을 찾아서 가져다주면 게이지가 이만큼 더 오른다")]
+    private float m_SnackBonus = 0.1f;
+
     [Header("단계")]
     [SerializeField, Tooltip("단계별 고양이 크기 (아기 · 어린이 · 어른)")]
     private float[] m_StageScales = { 0.06f, 0.08f, 0.1f };
@@ -135,9 +138,21 @@ public class CatGrowth : MonoBehaviour
     {
         if (needed == false || m_Complete || m_StageUpPending)
             return;
-        float bonus = kind == CareKind.Feed ? m_FeedBonus : (kind == CareKind.Pet ? m_PetBonus : m_SleepBonus);
+        float bonus = BonusOf(kind);
         AddProgress(bonus);
         Log($"돌봄 보너스 {kind} +{bonus:0.00} → {m_Progress:0.00}");
+    }
+
+    private float BonusOf(CareKind kind)
+    {
+        switch (kind)
+        {
+            case CareKind.Feed: return m_FeedBonus;
+            case CareKind.Pet: return m_PetBonus;
+            case CareKind.Sleep: return m_SleepBonus;
+            case CareKind.Snack: return m_SnackBonus;
+            default: return 0f;
+        }
     }
 
     private void Update()
@@ -286,4 +301,5 @@ public enum CareKind
     Feed,
     Pet,
     Sleep,
+    Snack,
 }

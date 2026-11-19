@@ -2982,6 +2982,67 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1301386011}
   m_CullTransparentMesh: 1
+--- !u!1 &1338665016
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1338665018}
+  - component: {fileID: 1338665017}
+  m_Layer: 0
+  m_Name: Snack Hunt
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1338665017
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1338665016}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82f994de52f74644299b243e29b3636d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SnackHunt
+  m_Placer: {fileID: 1868169792}
+  m_PlaneManager: {fileID: 851148903}
+  m_SnackPrefab: {fileID: 2278165849857351118, guid: f910ff8854650a24ab7da97155825b9f, type: 3}
+  m_HideDistance: {x: 1.2, y: 2.5}
+  m_MinAngleFromGaze: 70
+  m_EdgeMargin: 0.3
+  m_MinDistanceFromHome: 0.6
+  m_MinFloorDepth: 1
+  m_Cooldown: 30
+  m_FloorLift: 0.01
+  m_GiveDistance: 0.15
+  m_EatTime: 2.5
+  m_HungerAmount: 0.2
+  m_MouthDistance: 0.06
+  m_FallDistance: 0.5
+  m_ReferenceScale: 0.1
+  m_DebugLog: 0
+--- !u!4 &1338665018
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1338665016}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1362519178
 GameObject:
   m_ObjectHideFlags: 0
@@ -3264,6 +3325,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameFlow
   m_Placer: {fileID: 1868169792}
+  m_SnackHunt: {fileID: 1338665017}
   m_StartPanel: {fileID: 19245584}
   m_PlacementHint: {fileID: 574180661}
   m_ResultPanel: {fileID: 1653606574}
@@ -3284,6 +3346,12 @@ MonoBehaviour:
     \uC8FC\uC138\uC694"
   m_SleepHint: "\uC878\uB824\uD574\uC694! \uBC29\uC11D\uC744 <b>\uADF8\uB9BD</b>\uC73C\uB85C
     \uC9D1\uC5B4 \uACE0\uC591\uC774 \uC606\uC5D0 \uB193\uC544 \uC8FC\uC138\uC694"
+  m_SnackFindHint: "\uACE0\uC591\uC774\uAC00 \uBC14\uB2E5 \uC5B4\uB518\uAC00\uC5D0
+    \uAC04\uC2DD\uC744 \uC228\uACBC\uC5B4\uC694! \uC8FC\uC704\uB97C \uB458\uB7EC\uBCF4\uBA70
+    <b>\uBC18\uC9DD\uC774\uB294 \uC0DD\uC120</b>\uC744 \uCC3E\uC544\uBCF4\uC138\uC694"
+  m_SnackGiveHint: "\uCC3E\uC558\uB2E4! \uC0DD\uC120\uC744 \uACE0\uC591\uC774 <b>\uC785
+    \uAC00\uAE4C\uC774</b> \uAC00\uC838\uB2E4\uC8FC\uC138\uC694"
+  m_SnackHintDuration: 40
   m_PetHintDelay: 2
   m_HintDuration: 20
 --- !u!4 &1393198087
@@ -4766,3 +4834,4 @@ SceneRoots:
   - {fileID: 574180661}
   - {fileID: 1653606574}
   - {fileID: 1393198087}
+  - {fileID: 1338665018}

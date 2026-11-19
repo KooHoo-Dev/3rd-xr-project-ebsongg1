@@ -13,6 +13,7 @@ using UnityEngine.SceneManagement;
 ///             처음 한 번씩 안내 한 줄을 띄운다 (같은 안내 칸을 다시 쓴다):
 ///             집을 놓은 직후 → 쓰다듬기, 처음 배고플 때 → 먹이 주기, 처음 졸릴 때 → 방석으로 재우기.
 ///             그 행동을 하거나 m_HintDuration초가 지나면 사라진다. 이미 해 본 행동이면 건너뛴다.
+///             간식 찾기(SnackHunt): 처음 숨겼을 때 → 바닥에서 찾아보기, 처음 집었을 때 → 고양이에게 가져다주기.
 /// 4. Ending : 고양이가 다 자라면 (CatGrowth.IsComplete) 돌본 시간을 멈추고, 먹이 상자 · 먹이를 치우고,
 ///             CatEnding 연출(탐험가 차림 → 인사 → 가장자리로 떠나기)을 재생한다.
 /// 5. Result : 고양이가 사라지면 결과 패널(돌본 시간 · 먹인 횟수 · 쓰다듬은 횟수)을 띄운다.
@@ -27,6 +28,9 @@ public class GameFlow : MonoBehaviour
 
     [Header("연결")]
     [SerializeField] private CatHousePlacer m_Placer;
+
+    [SerializeField, Tooltip("간식 찾기. 비워 두면 씬에서 찾는다")]
+    private SnackHunt m_SnackHunt;
 
     [SerializeField, Tooltip("시작 패널 (World Space Canvas)")]
     private Transform m_StartPanel;
@@ -67,6 +71,11 @@ public class GameFlow : MonoBehaviour
     [SerializeField] private string m_PetHint = "고양이 머리를 컨트롤러로 <b>문질러</b> 쓰다듬어 보세요";
     [SerializeField] private string m_FeedHint = "배고파해요! 상자에서 생선을 <b>그립</b>으로 집어 밥그릇에 넣어 주세요";
     [SerializeField] private string m_SleepHint = "졸려해요! 방석을 <b>그립</b>으로 집어 고양이 옆에 놓아 주세요";
+    [SerializeField] private string m_SnackFindText = "고양이가 간식을 숨겼어요! 바닥에서 <b>반짝이는 생선</b>을 찾아보세요";
+    [SerializeField] private string m_SnackGiveText = "찾았다! <b>고양이에게 직접</b> 가져다주세요";
+
+    [SerializeField, Tooltip("간식 찾기 안내는 찾을 때까지 이 시간 동안 띄운다 (초)")]
+    private float m_SnackHintDuration = 40f;
 
     [SerializeField, Tooltip("집을 놓고 쓰다듬기 안내가 뜨기까지 (초)")]
     private float m_PetHintDelay = 2f;
@@ -74,7 +83,7 @@ public class GameFlow : MonoBehaviour
     [SerializeField, Tooltip("행동을 안 해도 이 시간이 지나면 안내가 사라진다 (초)")]
     private float m_HintDuration = 20f;
 
-    private enum CareHint { Pet, Feed, Sleep, Count }
+    private enum CareHint { Pet, Feed, Sleep, SnackFind, SnackGive, Count }
 
     private State m_State = State.Title;
     private TMP_Text m_HintLabel;
@@ -128,6 +137,8 @@ public class GameFlow : MonoBehaviour
         if (m_ResultPanel != null)
             m_ResultPanel.gameObject.SetActive(false);
         m_PlaceTitleAt = Time.time + m_FirstPlaceDelay;
+        if (m_SnackHunt == null)
+            m_SnackHunt = FindFirstObjectByType<SnackHunt>();
     }
 
     /// <summary>결과 패널의 "처음부터 다시" 버튼에서 부른다. 씬을 다시 불러온다.</summary>
@@ -229,6 +240,12 @@ public class GameFlow : MonoBehaviour
         if (m_PlacementHint == null || m_HintLabel == null)
             return;
 
+        // 간식을 처음 집은 순간에는 다른 안내가 떠 있어도 바꿔서 "고양이에게 직접" 안내를 바로 보여 준다.
+        // (생선이 먹이와 똑같이 생겨서 밥그릇에 넣는 줄 알기 쉽다)
+        if (m_ActiveHint >= 0 && m_ActiveHint != (int)CareHint.SnackGive && m_HintShown[(int)CareHint.SnackGive] == false
+            && m_SnackHunt != null && m_SnackHunt.IsSnackHeld)
+            HideCareHint();
+
         if (m_ActiveHint >= 0)
         {
             FollowGaze(m_PlacementHint, m_HintDistance, m_HintDrop);
@@ -244,9 +261,14 @@ public class GameFlow : MonoBehaviour
             TryShowCareHint(CareHint.Feed, m_FeedHint);
         if (m_ActiveHint < 0 && m_CatSleeping != null && m_CatNeeds != null && m_CatNeeds.IsSleepy && m_CatNeeds.IsSleeping == false)
             TryShowCareHint(CareHint.Sleep, m_SleepHint);
+        if (m_ActiveHint < 0 && m_SnackHunt != null && m_SnackHunt.IsSnackHidden)
+            TryShowCareHint(CareHint.SnackFind, m_SnackFindText, m_SnackHintDuration);
+        if (m_ActiveHint < 0 && m_SnackHunt != null && m_SnackHunt.IsSnackHeld)
+            TryShowCareHint(CareHint.SnackGive, m_SnackGiveText);
     }
 
-    private void TryShowCareHint(CareHint hint, string text)
+    /// <summary>duration이 0 이하면 m_HintDuration 동안 띄운다.</summary>
+    private void TryShowCareHint(CareHint hint, string text, float duration = 0f)
     {
         int i = (int)hint;
         if (m_HintShown[i])
@@ -258,7 +280,7 @@ public class GameFlow : MonoBehaviour
 
         m_ActiveHint = i;
         m_HintBaseline = CareCount(hint);
-        m_HintHideAt = Time.time + m_HintDuration;
+        m_HintHideAt = Time.time + (duration > 0f ? duration : m_HintDuration);
         m_HintLabel.text = text;
         m_PlacementHint.gameObject.SetActive(true);
         SnapInFront(m_PlacementHint, m_HintDistance, m_HintDrop);
@@ -278,6 +300,8 @@ public class GameFlow : MonoBehaviour
             case CareHint.Pet: return m_CatPetting != null ? m_CatPetting.PetCount : 0;
             case CareHint.Feed: return m_CatEating != null ? m_CatEating.FeedCount : 0;
             case CareHint.Sleep: return m_CatSleeping != null ? m_CatSleeping.CushionSleepCount : 0;
+            case CareHint.SnackFind: return m_SnackHunt != null ? m_SnackHunt.FoundCount : 0;
+            case CareHint.SnackGive: return m_SnackHunt != null ? m_SnackHunt.GivenCount : 0;
             default: return 0;
         }
     }
@@ -290,7 +314,9 @@ public class GameFlow : MonoBehaviour
 
         var cat = m_Placer != null ? m_Placer.PlacedCat : null;
 
-        // 먹이 상자와 밖에 나와 있는 먹이를 치운다. (밥그릇 · 집은 남겨 둔다)
+        // 먹이 상자와 밖에 나와 있는 먹이 · 간식을 치운다. (밥그릇 · 집은 남겨 둔다)
+        if (m_SnackHunt != null)
+            m_SnackHunt.Clear();
         foreach (var box in FindObjectsByType<FoodBox>(FindObjectsSortMode.None))
             box.gameObject.SetActive(false);
         foreach (var food in FindObjectsByType<CatFood>(FindObjectsSortMode.None))

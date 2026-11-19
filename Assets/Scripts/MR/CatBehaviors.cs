@@ -13,12 +13,17 @@ using UnityEngine;
 ///
 /// 쓰다듬을 때 어떤 동작을 할지는 CatPetting이 PetReaction()으로 물어본다.
 /// 먹고 난 뒤에는 CatEating이 OnFed()를 부른다.
+///
+/// 간식 찾기 (SnackHunt)
+/// - 땅 파기(Dig)가 끝나면 Dug 이벤트 → SnackHunt가 바닥 어딘가에 간식을 숨긴다.
+/// - 플레이어가 찾은 간식을 가져오면 SnackHunt가 TakeSnack()을 부른다.
+///   플레이어 쪽으로 돌아서 받아먹고(Eat) 다 먹으면 콜백을 부른 뒤 기뻐한다(Joy).
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(CatNeeds))]
 public class CatBehaviors : MonoBehaviour
 {
-    private enum Action { None, Doze, Hi, Dig, Sit, Joy }
+    private enum Action { None, Doze, Hi, Dig, Sit, Joy, Snack }
 
     [Header("쉬다가 하는 동작")]
     [SerializeField, Tooltip("쉬는 중에 다른 동작을 할 간격 (최소 · 최대, 초)")]
@@ -55,6 +60,8 @@ public class CatBehaviors : MonoBehaviour
     private static readonly int s_SitHash = Animator.StringToHash("Sit");
     private static readonly int s_JoyHash = Animator.StringToHash("Joy");
     private static readonly int s_PetHash = Animator.StringToHash("Pet");
+    private static readonly int s_EatHash = Animator.StringToHash("Eat");
+    private const string k_EatStateName = "Eat";
 
     private Animator m_Animator;
     private CatNeeds m_Needs;
@@ -71,9 +78,17 @@ public class CatBehaviors : MonoBehaviour
     private float m_NextGreet;
     private bool m_PlayerWasFar = true;
     private bool m_PendingJoy;
+    private float m_SnackEatTime;
+    private System.Action m_OnSnackEaten;
+
+    /// <summary>땅 파기(Dig) 동작이 끝났을 때. SnackHunt가 간식을 숨긴다.</summary>
+    public event System.Action Dug;
 
     /// <summary>동작 중인지 (도는 중 포함)</summary>
     public bool IsBusy => m_Current != Action.None;
+
+    /// <summary>지금 간식을 받아먹을 수 있는지 (자는 중 · 먹는 중 · 다른 동작 중이 아닐 때)</summary>
+    public bool CanTakeSnack => m_Current == Action.None && CanAct();
 
     private CatStage Stage => m_Growth != null ? m_Growth.Stage : CatStage.Baby;
 
@@ -111,6 +126,20 @@ public class CatBehaviors : MonoBehaviour
     {
         if (Stage == CatStage.Adult)
             m_PendingJoy = true;
+    }
+
+    /// <summary>
+    /// 플레이어가 가져온 간식을 받아먹는다. 플레이어 쪽으로 돌고 eatTime 동안 먹은 뒤 onEaten을 부르고 기뻐한다.
+    /// CanTakeSnack이 false면 아무것도 하지 않고 false를 돌려준다.
+    /// </summary>
+    public bool TakeSnack(float eatTime, System.Action onEaten)
+    {
+        if (CanTakeSnack == false)
+            return false;
+        m_SnackEatTime = eatTime;
+        m_OnSnackEaten = onEaten;
+        StartAction(Action.Snack, true);
+        return true;
     }
 
     private void Update()
@@ -229,19 +258,43 @@ public class CatBehaviors : MonoBehaviour
         }
 
         m_ActionTimer -= Time.deltaTime;
+
+        // 먹는 동작이 먹는 시간보다 짧으면 끝날 때마다 다시 재생한다. (CatEating과 같은 방식)
+        if (m_Current == Action.Snack && m_Animator != null && m_ActionTimer > 0.5f
+            && m_Animator.IsInTransition(0) == false
+            && m_Animator.GetCurrentAnimatorStateInfo(0).IsName(k_EatStateName) == false)
+            m_Animator.SetTrigger(s_EatHash);
+
         if (m_ActionTimer > 0f)
             return;
 
-        Log($"{m_Current} 끝");
+        var finished = m_Current;
+        Log($"{finished} 끝");
         m_Current = Action.None;
         if (m_Wander != null && m_Needs.IsSleeping == false)
             m_Wander.Resume();
+
+        if (finished == Action.Dig)
+        {
+            Dug?.Invoke();
+        }
+        else if (finished == Action.Snack)
+        {
+            if (m_Animator != null)
+                m_Animator.ResetTrigger(s_EatHash);
+            var onEaten = m_OnSnackEaten;
+            m_OnSnackEaten = null;
+            onEaten?.Invoke();
+            m_PendingJoy = true;
+        }
     }
 
     private void PlayAnimation()
     {
         var (hash, clip) = AnimationOf(m_Current);
         m_ActionTimer = ClipLength(clip);
+        if (m_Current == Action.Snack)
+            m_ActionTimer = Mathf.Max(m_ActionTimer, m_SnackEatTime);
         if (m_Animator != null && m_Animator.runtimeAnimatorController != null)
             m_Animator.SetTrigger(hash);
 
@@ -251,6 +304,7 @@ public class CatBehaviors : MonoBehaviour
         {
             case Action.Hi:
             case Action.Joy:
+            case Action.Snack:
                 m_Face.Show(CatExpression.Happy, m_ActionTimer);
                 break;
             case Action.Doze:
@@ -286,6 +340,7 @@ public class CatBehaviors : MonoBehaviour
             case Action.Dig: return (s_DigHash, "DigA");
             case Action.Sit: return (s_SitHash, "Sit");
             case Action.Joy: return (s_JoyHash, "Jump");
+            case Action.Snack: return (s_EatHash, "Quadruped_Eating");
             default: return (0, null);
         }
     }
