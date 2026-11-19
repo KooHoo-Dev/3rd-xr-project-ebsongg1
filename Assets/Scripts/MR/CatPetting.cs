@@ -162,6 +162,8 @@ public class CatPetting : MonoBehaviour
         if (m_Needs != null && m_Needs.IsSleeping)
             return;
 
+        SoundBank.Play(Sfx.Meow, transform.position);
+
         // 먹으러 가거나 먹는 중 · 다른 동작(인사 · 땅 파기 등) 중이면 웃는 얼굴만 보여 주고, 동작 · 돌아다니기는 건드리지 않는다.
         if ((m_Eating != null && m_Eating.IsBusy) || (m_Behaviors != null && m_Behaviors.IsBusy)
             || (m_Sleeping != null && m_Sleeping.IsBusy))

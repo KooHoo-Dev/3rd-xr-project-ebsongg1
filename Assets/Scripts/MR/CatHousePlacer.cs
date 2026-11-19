@@ -285,11 +285,16 @@ public class CatHousePlacer : MonoBehaviour
             if (cat.TryGetComponent(out CatWander wander) == false)
                 wander = cat.AddComponent<CatWander>();
             wander.Begin(plane, root);
+
+            // 상태에 따라 나는 소리 (보채기 · 골골 · 성장)
+            if (cat.GetComponent<CatSounds>() == null)
+                cat.AddComponent<CatSounds>();
         }
 
         PlaceFeeding(plane, root);
 
         IsPlaced = true;
+        SoundBank.Play(Sfx.Place, pose.position);
         PlacedPlane = plane;
         if (m_Reticle != null)
             m_Reticle.SetActive(false);

@@ -1802,6 +1802,209 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.XR.ARFoundation::UnityEngine.XR.ARFoundation.ARCameraBackground
   m_UseCustomMaterial: 0
   m_CustomMaterial: {fileID: 0}
+--- !u!1 &897832663
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 897832665}
+  - component: {fileID: 897832664}
+  m_Layer: 0
+  m_Name: Sound Bank
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &897832664
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 897832663}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 166bc007969c6464ea6fad6e4a86aa57, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SoundBank
+  m_Entries:
+  - name: Meow
+    id: 0
+    clips:
+    - {fileID: 8300000, guid: abc3ebbb946d22f4a8286ec98a5e9bcd, type: 3}
+    volume: 1
+    pitchJitter: 0.1
+    spatial: 1
+    minInterval: 0.8
+    maxDuration: 0
+  - name: MeowNeed
+    id: 1
+    clips:
+    - {fileID: 8300000, guid: abc3ebbb946d22f4a8286ec98a5e9bcd, type: 3}
+    volume: 1
+    pitchJitter: 0.08
+    spatial: 1
+    minInterval: 3
+    maxDuration: 0
+  - name: Eat
+    id: 2
+    clips:
+    - {fileID: 8300000, guid: b9844de05f4360844b45a4690e127e05, type: 3}
+    volume: 0.7
+    pitchJitter: 0.05
+    spatial: 1
+    minInterval: 0.5
+    maxDuration: 2.5
+  - name: Joy
+    id: 3
+    clips:
+    - {fileID: 8300000, guid: 1e334faf2ffcd134684858686d035804, type: 3}
+    volume: 1
+    pitchJitter: 0.05
+    spatial: 1
+    minInterval: 0.1
+    maxDuration: 0
+  - name: Purr
+    id: 4
+    clips:
+    - {fileID: 8300000, guid: 0d124fde869a81b4d87389ccf9b8791e, type: 3}
+    volume: 0.5
+    pitchJitter: 0
+    spatial: 1
+    minInterval: 0.1
+    maxDuration: 0
+  - name: Hop
+    id: 5
+    clips:
+    - {fileID: 8300000, guid: 9adfa031444877b4e88a3e17bddea152, type: 3}
+    volume: 1
+    pitchJitter: 0.05
+    spatial: 1
+    minInterval: 0.1
+    maxDuration: 0
+  - name: FoodPop
+    id: 6
+    clips:
+    - {fileID: 8300000, guid: 361166141a974b642b33b8fe7f89de17, type: 3}
+    volume: 1
+    pitchJitter: 0.05
+    spatial: 1
+    minInterval: 0.1
+    maxDuration: 0
+  - name: FoodInBowl
+    id: 7
+    clips:
+    - {fileID: 8300000, guid: 361166141a974b642b33b8fe7f89de17, type: 3}
+    volume: 1
+    pitchJitter: 0.05
+    spatial: 1
+    minInterval: 0.1
+    maxDuration: 0
+  - name: StageUp
+    id: 8
+    clips:
+    - {fileID: 8300000, guid: f112577649bb606448a27de7dd5bde57, type: 3}
+    volume: 1
+    pitchJitter: 0.05
+    spatial: 1
+    minInterval: 0.1
+    maxDuration: 0
+  - name: Dig
+    id: 9
+    clips:
+    - {fileID: 0}
+    volume: 0.7
+    pitchJitter: 0.05
+    spatial: 1
+    minInterval: 0.1
+    maxDuration: 0
+  - name: SnackSparkle
+    id: 10
+    clips:
+    - {fileID: 8300000, guid: 2abeb129a0263db4796f0c7356376bd5, type: 3}
+    volume: 0.4
+    pitchJitter: 0
+    spatial: 1
+    minInterval: 0.1
+    maxDuration: 0
+  - name: SnackFound
+    id: 11
+    clips:
+    - {fileID: 8300000, guid: 02c647cc72245fc47abe196bea7d3a7e, type: 3}
+    volume: 0.8
+    pitchJitter: 0
+    spatial: 0
+    minInterval: 0.1
+    maxDuration: 0
+  - name: Goodbye
+    id: 12
+    clips:
+    - {fileID: 8300000, guid: 1ea0864524e40724e801865405cf8875, type: 3}
+    volume: 1
+    pitchJitter: 0.05
+    spatial: 1
+    minInterval: 0.1
+    maxDuration: 0
+  - name: Button
+    id: 13
+    clips:
+    - {fileID: 8300000, guid: 16fba6d30ed741d4a9fdd6e79ee2f3ac, type: 3}
+    volume: 0.8
+    pitchJitter: 0
+    spatial: 0
+    minInterval: 0.1
+    maxDuration: 0
+  - name: Place
+    id: 14
+    clips:
+    - {fileID: 8300000, guid: 02c647cc72245fc47abe196bea7d3a7e, type: 3}
+    volume: 1
+    pitchJitter: 0.05
+    spatial: 1
+    minInterval: 0.1
+    maxDuration: 0
+  - name: Hint
+    id: 15
+    clips:
+    - {fileID: 8300000, guid: 02c647cc72245fc47abe196bea7d3a7e, type: 3}
+    volume: 0.5
+    pitchJitter: 0
+    spatial: 0
+    minInterval: 0.1
+    maxDuration: 0
+  - name: Result
+    id: 16
+    clips:
+    - {fileID: 8300000, guid: 02c647cc72245fc47abe196bea7d3a7e, type: 3}
+    volume: 0.8
+    pitchJitter: 0
+    spatial: 0
+    minInterval: 0.1
+    maxDuration: 0
+  m_MasterVolume: 1
+  m_MinDistance: 0.3
+  m_MaxDistance: 6
+  m_PoolSize: 12
+  m_CutFade: 0.3
+--- !u!4 &897832665
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 897832663}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &944442701
 GameObject:
   m_ObjectHideFlags: 0
@@ -3346,11 +3549,10 @@ MonoBehaviour:
     \uC8FC\uC138\uC694"
   m_SleepHint: "\uC878\uB824\uD574\uC694! \uBC29\uC11D\uC744 <b>\uADF8\uB9BD</b>\uC73C\uB85C
     \uC9D1\uC5B4 \uACE0\uC591\uC774 \uC606\uC5D0 \uB193\uC544 \uC8FC\uC138\uC694"
-  m_SnackFindHint: "\uACE0\uC591\uC774\uAC00 \uBC14\uB2E5 \uC5B4\uB518\uAC00\uC5D0
-    \uAC04\uC2DD\uC744 \uC228\uACBC\uC5B4\uC694! \uC8FC\uC704\uB97C \uB458\uB7EC\uBCF4\uBA70
-    <b>\uBC18\uC9DD\uC774\uB294 \uC0DD\uC120</b>\uC744 \uCC3E\uC544\uBCF4\uC138\uC694"
-  m_SnackGiveHint: "\uCC3E\uC558\uB2E4! \uC0DD\uC120\uC744 \uACE0\uC591\uC774 <b>\uC785
-    \uAC00\uAE4C\uC774</b> \uAC00\uC838\uB2E4\uC8FC\uC138\uC694"
+  m_SnackFindText: "\uACE0\uC591\uC774\uAC00 \uAC04\uC2DD\uC744 \uC228\uACBC\uC5B4\uC694!
+    \uBC14\uB2E5\uC5D0\uC11C <b>\uBC18\uC9DD\uC774\uB294 \uC0DD\uC120</b>\uC744 \uCC3E\uC544\uBCF4\uC138\uC694"
+  m_SnackGiveText: "\uCC3E\uC558\uB2E4! <b>\uACE0\uC591\uC774\uC5D0\uAC8C \uC9C1\uC811</b>
+    \uAC00\uC838\uB2E4\uC8FC\uC138\uC694"
   m_SnackHintDuration: 40
   m_PetHintDelay: 2
   m_HintDuration: 20
@@ -4835,3 +5037,4 @@ SceneRoots:
   - {fileID: 1653606574}
   - {fileID: 1393198087}
   - {fileID: 1338665018}
+  - {fileID: 897832665}

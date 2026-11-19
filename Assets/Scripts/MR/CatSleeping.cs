@@ -261,6 +261,7 @@ public class CatSleeping : MonoBehaviour
         m_HopTo = to;
         m_HopT = 0f;
         m_Step = step;
+        SoundBank.Play(Sfx.Hop, transform.position);
     }
 
     /// <summary>포물선으로 폴짝. 다 뛰었으면 true</summary>

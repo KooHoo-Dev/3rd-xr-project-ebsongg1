@@ -139,6 +139,7 @@ public class FoodBowl : MonoBehaviour, IXRSelectFilter, IXRHoverFilter
 
         food.InBowl = true;
         m_FoodInBowl = food;
+        SoundBank.Play(Sfx.FoodInBowl, slot.position);
         Log("먹이가 밥그릇에 들어옴");
     }
 

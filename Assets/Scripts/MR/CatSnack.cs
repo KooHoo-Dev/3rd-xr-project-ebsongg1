@@ -5,7 +5,8 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 /// 고양이가 숨긴 간식 (말린 생선). 숨기기 · 건네주기 흐름은 SnackHunt가 맡고, 이 컴포넌트는 간식 한 개의 상태만 다룬다.
 ///
 /// - 숨어 있는 동안: 바닥에 고정(kinematic)되어 있고 반짝이(m_Sparkle)가 켜져 있다.
-/// - 처음 집으면: 찾은 것으로 표시하고 반짝이를 끈다.
+///   반짝 소리(Sfx.SnackSparkle)도 간식 자리에서 반복해서 나서, 시야 밖에 있어도 소리로 방향을 알 수 있다.
+/// - 처음 집으면: 찾은 것으로 표시하고 반짝이 · 반짝 소리를 끄고 "찾았다" 소리(Sfx.SnackFound)를 낸다.
 /// - 집었다가 놓으면: 물리로 떨어진다. (XRI가 잡기 전 상태인 kinematic으로 되돌리므로 다음 프레임에 풀어 준다)
 /// - 고양이에게 건네지면: 잡기를 끄고 다시 고정한다. SnackHunt가 작아지며 사라지게 한다.
 ///
@@ -22,6 +23,7 @@ public class CatSnack : MonoBehaviour
     private XRGrabInteractable m_Grab;
     private Rigidbody m_Body;
     private bool m_WasHeld;
+    private AudioSource m_SparkleLoop;
 
     /// <summary>지금 플레이어 손에 들려 있는지</summary>
     public bool IsHeld => m_Grab != null && m_Grab.isSelected;
@@ -75,6 +77,7 @@ public class CatSnack : MonoBehaviour
         {
             WasFound = true;
             SetSparkle(false);
+            SoundBank.Play(Sfx.SnackFound, transform.position);
         }
 
         // 놓은 직후: XRI가 kinematic으로 되돌려 놓았으므로 물리로 떨어지게 풀어 준다.
@@ -102,5 +105,20 @@ public class CatSnack : MonoBehaviour
     {
         if (m_Sparkle != null)
             m_Sparkle.SetActive(on);
+
+        if (on && m_SparkleLoop == null)
+        {
+            m_SparkleLoop = SoundBank.StartLoop(Sfx.SnackSparkle, transform);
+        }
+        else if (on == false)
+        {
+            SoundBank.StopLoop(m_SparkleLoop);
+            m_SparkleLoop = null;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        SoundBank.StopLoop(m_SparkleLoop);
     }
 }

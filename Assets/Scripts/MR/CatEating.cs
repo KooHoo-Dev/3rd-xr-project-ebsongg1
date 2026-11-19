@@ -174,6 +174,7 @@ public class CatEating : MonoBehaviour
             m_Animator.SetTrigger(s_EatHash);
         if (m_Face != null)
             m_Face.Show(CatExpression.Happy, m_EatTime);
+        SoundBank.Play(Sfx.Eat, transform.position);
         Log("냠냠");
     }
 

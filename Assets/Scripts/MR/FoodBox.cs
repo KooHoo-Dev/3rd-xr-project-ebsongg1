@@ -92,6 +92,7 @@ public class FoodBox : MonoBehaviour
         var spawn = m_SpawnPoint != null ? m_SpawnPoint : transform;
         // 앵커 아래가 아니라 월드에 둔다. (던지거나 떨어뜨릴 때 앵커 위치 보정의 영향을 받지 않게)
         var go = Instantiate(m_FoodPrefab, spawn.position, spawn.rotation);
+        SoundBank.Play(Sfx.FoodPop, spawn.position);
         m_Food = go.GetComponent<CatFood>();
         if (m_Food == null)
             m_Food = go.AddComponent<CatFood>();

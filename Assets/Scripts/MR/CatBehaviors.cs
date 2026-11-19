@@ -297,6 +297,7 @@ public class CatBehaviors : MonoBehaviour
             m_ActionTimer = Mathf.Max(m_ActionTimer, m_SnackEatTime);
         if (m_Animator != null && m_Animator.runtimeAnimatorController != null)
             m_Animator.SetTrigger(hash);
+        PlayActionSound();
 
         if (m_Face == null)
             return;
@@ -312,6 +313,25 @@ public class CatBehaviors : MonoBehaviour
                 break;
             case Action.Dig:
                 m_Face.Show(CatExpression.Excited, m_ActionTimer);
+                break;
+        }
+    }
+
+    private void PlayActionSound()
+    {
+        switch (m_Current)
+        {
+            case Action.Hi:
+                SoundBank.Play(Sfx.Meow, transform.position);
+                break;
+            case Action.Dig:
+                SoundBank.Play(Sfx.Dig, transform.position);
+                break;
+            case Action.Joy:
+                SoundBank.Play(Sfx.Joy, transform.position);
+                break;
+            case Action.Snack:
+                SoundBank.Play(Sfx.Eat, transform.position);
                 break;
         }
     }

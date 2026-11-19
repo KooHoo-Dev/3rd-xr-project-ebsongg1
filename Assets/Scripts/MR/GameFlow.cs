@@ -144,6 +144,13 @@ public class GameFlow : MonoBehaviour
     /// <summary>결과 패널의 "처음부터 다시" 버튼에서 부른다. 씬을 다시 불러온다.</summary>
     public void Restart()
     {
+        SoundBank.Play(Sfx.Button);
+        // 버튼 소리가 끊기지 않게 잠깐 기다렸다가 다시 불러온다.
+        Invoke(nameof(ReloadScene), 0.25f);
+    }
+
+    private void ReloadScene()
+    {
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
@@ -152,6 +159,7 @@ public class GameFlow : MonoBehaviour
     {
         if (m_State != State.Title)
             return;
+        SoundBank.Play(Sfx.Button);
         if (m_StartPanel != null)
             m_StartPanel.gameObject.SetActive(false);
         if (m_Placer != null)
@@ -282,6 +290,7 @@ public class GameFlow : MonoBehaviour
         m_HintBaseline = CareCount(hint);
         m_HintHideAt = Time.time + (duration > 0f ? duration : m_HintDuration);
         m_HintLabel.text = text;
+        SoundBank.Play(Sfx.Hint);
         m_PlacementHint.gameObject.SetActive(true);
         SnapInFront(m_PlacementHint, m_HintDistance, m_HintDrop);
     }
@@ -348,6 +357,7 @@ public class GameFlow : MonoBehaviour
         if (m_ResultPanel != null)
         {
             m_ResultPanel.gameObject.SetActive(true);
+            SoundBank.Play(Sfx.Result);
             SnapInFront(m_ResultPanel, m_PanelDistance, m_PanelDrop);
         }
         SetState(State.Result);

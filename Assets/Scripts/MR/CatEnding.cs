@@ -198,6 +198,7 @@ public class CatEnding : MonoBehaviour
     {
         if (m_Animator != null)
             m_Animator.SetTrigger(s_HiHash);
+        SoundBank.Play(Sfx.Goodbye, transform.position);
         m_Timer = ClipLength("Hi");
         if (m_Face != null)
             m_Face.Show(CatExpression.Happy, m_Timer);
