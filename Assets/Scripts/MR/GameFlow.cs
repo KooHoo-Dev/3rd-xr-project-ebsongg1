@@ -2,6 +2,7 @@ using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 /// <summary>
 /// 게임 전체 흐름: 시작 화면 → 고양이 집 배치 → 육성 → 엔딩 → 결과
@@ -14,12 +15,14 @@ using UnityEngine.SceneManagement;
 ///             집을 놓은 직후 → 쓰다듬기, 처음 배고플 때 → 먹이 주기, 처음 졸릴 때 → 방석으로 재우기.
 ///             그 행동을 하거나 m_HintDuration초가 지나면 사라진다. 이미 해 본 행동이면 건너뛴다.
 ///             간식 찾기(SnackHunt): 처음 숨겼을 때 → 바닥에서 찾아보기, 처음 집었을 때 → 고양이에게 가져다주기.
+///             성장 단계가 오르면 같은 안내 칸에 축하 문구를 잠깐 띄운다. (떠 있던 안내는 끝나면 다시 보여 준다)
 /// 4. Ending : 고양이가 다 자라면 (CatGrowth.IsComplete) 돌본 시간을 멈추고, 먹이 상자 · 먹이를 치우고,
 ///             CatEnding 연출(탐험가 차림 → 인사 → 가장자리로 떠나기)을 재생한다.
 /// 5. Result : 고양이가 사라지면 결과 패널(돌본 시간 · 먹인 횟수 · 쓰다듬은 횟수)을 띄운다.
 ///             "처음부터 다시" 버튼은 씬을 다시 불러온다.
 ///
 /// 시작 버튼 → StartGame(), 다시 버튼 → Restart() (Tools › Here Kitty › 시작 · 결과 화면 만들기)
+/// 패널 · 안내는 UIPop으로 팝 하고 나타나고 흐려지며 사라진다. 버튼에는 UIButtonBounce를 붙인다.
 /// </summary>
 [DisallowMultipleComponent]
 public class GameFlow : MonoBehaviour
@@ -83,6 +86,13 @@ public class GameFlow : MonoBehaviour
     [SerializeField, Tooltip("행동을 안 해도 이 시간이 지나면 안내가 사라진다 (초)")]
     private float m_HintDuration = 20f;
 
+    [Header("성장 축하")]
+    [SerializeField] private string m_ChildText = "쑥쑥! 고양이가 <b>어린이</b>가 됐어요";
+    [SerializeField] private string m_AdultText = "다 컸다! 고양이가 <b>어른</b>이 됐어요";
+
+    [SerializeField, Tooltip("축하 문구를 띄우는 시간 (초)")]
+    private float m_StageTextDuration = 3f;
+
     private enum CareHint { Pet, Feed, Sleep, SnackFind, SnackGive, Count }
 
     private State m_State = State.Title;
@@ -91,6 +101,8 @@ public class GameFlow : MonoBehaviour
     private int m_ActiveHint = -1;
     private int m_HintBaseline;
     private float m_HintHideAt;
+    private string m_ActiveHintText;
+    private float m_NoticeUntil = -1f;
     private float m_PetHintAt;
     private CatNeeds m_CatNeeds;
     private CatPetting m_CatPetting;
@@ -133,9 +145,15 @@ public class GameFlow : MonoBehaviour
             m_PlacementHint.gameObject.SetActive(false);
         }
         if (m_StartPanel != null)
+        {
             m_StartPanel.gameObject.SetActive(true);
+            // 플레이어 앞에 놓기 전까지는 투명하게 둔다. (놓을 때 팝 하고 나타난다)
+            UIPop.HideNow(m_StartPanel);
+        }
         if (m_ResultPanel != null)
             m_ResultPanel.gameObject.SetActive(false);
+        AddButtonBounce(m_StartPanel);
+        AddButtonBounce(m_ResultPanel);
         m_PlaceTitleAt = Time.time + m_FirstPlaceDelay;
         if (m_SnackHunt == null)
             m_SnackHunt = FindFirstObjectByType<SnackHunt>();
@@ -160,14 +178,13 @@ public class GameFlow : MonoBehaviour
         if (m_State != State.Title)
             return;
         SoundBank.Play(Sfx.Button);
-        if (m_StartPanel != null)
-            m_StartPanel.gameObject.SetActive(false);
+        UIPop.Hide(m_StartPanel);
         if (m_Placer != null)
             m_Placer.enabled = true;
         if (m_PlacementHint != null)
         {
-            m_PlacementHint.gameObject.SetActive(true);
             SnapInFront(m_PlacementHint, m_HintDistance, m_HintDrop);
+            UIPop.Show(m_PlacementHint);
         }
         SetState(State.Placing);
     }
@@ -208,6 +225,7 @@ public class GameFlow : MonoBehaviour
                 return;
             m_PlaceTitleAt = -1f;
             SnapInFront(m_StartPanel, m_PanelDistance, m_PanelDrop);
+            UIPop.Show(m_StartPanel);
             return;
         }
         KeepInView(m_StartPanel);
@@ -221,13 +239,16 @@ public class GameFlow : MonoBehaviour
             return;
         var toPanel = panel.position - cam.transform.position;
         if (Vector3.Angle(Flat(cam.transform.forward), Flat(toPanel)) > m_RecenterAngle)
+        {
+            // 순간이동하면 눈에 거슬리므로 앞으로 옮긴 뒤 다시 팝 하고 나타나게 한다.
             SnapInFront(panel, m_PanelDistance, m_PanelDrop);
+            UIPop.Show(panel);
+        }
     }
 
     private void OnPlaced()
     {
-        if (m_PlacementHint != null)
-            m_PlacementHint.gameObject.SetActive(false);
+        UIPop.Hide(m_PlacementHint);
         m_RaisingStartTime = Time.time;
         var cat = m_Placer.PlacedCat;
         if (cat != null)
@@ -238,6 +259,8 @@ public class GameFlow : MonoBehaviour
             m_CatEating = cat.GetComponent<CatEating>();
             m_CatSleeping = cat.GetComponent<CatSleeping>();
         }
+        if (m_Growth != null)
+            m_Growth.StageChanged += OnStageChanged;
         m_PetHintAt = Time.time + m_PetHintDelay;
         SetState(State.Raising);
     }
@@ -248,6 +271,28 @@ public class GameFlow : MonoBehaviour
         if (m_PlacementHint == null || m_HintLabel == null)
             return;
 
+        // 축하 문구가 떠 있는 동안은 새 안내를 띄우지 않는다. (떠 있던 안내의 사라짐 판정은 아래에서 계속한다)
+        bool notice = m_NoticeUntil > 0f;
+        if (notice)
+        {
+            FollowGaze(m_PlacementHint, m_HintDistance, m_HintDrop);
+            if (Time.time >= m_NoticeUntil)
+            {
+                m_NoticeUntil = -1f;
+                notice = false;
+                // 축하 전에 떠 있던 안내가 아직 남아 있으면 다시 보여 주고, 없으면 숨긴다.
+                if (m_ActiveHint >= 0)
+                {
+                    m_HintLabel.text = m_ActiveHintText;
+                    UIPop.Show(m_PlacementHint);
+                }
+                else
+                {
+                    UIPop.Hide(m_PlacementHint);
+                }
+            }
+        }
+
         // 간식을 처음 집은 순간에는 다른 안내가 떠 있어도 바꿔서 "고양이에게 직접" 안내를 바로 보여 준다.
         // (생선이 먹이와 똑같이 생겨서 밥그릇에 넣는 줄 알기 쉽다)
         if (m_ActiveHint >= 0 && m_ActiveHint != (int)CareHint.SnackGive && m_HintShown[(int)CareHint.SnackGive] == false
@@ -256,13 +301,16 @@ public class GameFlow : MonoBehaviour
 
         if (m_ActiveHint >= 0)
         {
-            FollowGaze(m_PlacementHint, m_HintDistance, m_HintDrop);
+            if (notice == false)
+                FollowGaze(m_PlacementHint, m_HintDistance, m_HintDrop);
             if (CareCount((CareHint)m_ActiveHint) > m_HintBaseline || Time.time >= m_HintHideAt
                 || (m_ActiveHint == (int)CareHint.Sleep && m_CatNeeds != null && m_CatNeeds.IsSleeping))
                 HideCareHint();
             return;
         }
 
+        if (notice)
+            return;
         if (Time.time >= m_PetHintAt)
             TryShowCareHint(CareHint.Pet, m_PetHint);
         if (m_ActiveHint < 0 && m_CatNeeds != null && m_CatNeeds.IsHungry)
@@ -289,17 +337,49 @@ public class GameFlow : MonoBehaviour
         m_ActiveHint = i;
         m_HintBaseline = CareCount(hint);
         m_HintHideAt = Time.time + (duration > 0f ? duration : m_HintDuration);
+        m_ActiveHintText = text;
         m_HintLabel.text = text;
         SoundBank.Play(Sfx.Hint);
-        m_PlacementHint.gameObject.SetActive(true);
-        SnapInFront(m_PlacementHint, m_HintDistance, m_HintDrop);
+        // 이미 떠 있으면(다른 안내를 바꿔 띄울 때) 자리는 그대로 두고 문구만 바꿔 팝 한다.
+        if (m_PlacementHint.gameObject.activeSelf == false)
+            SnapInFront(m_PlacementHint, m_HintDistance, m_HintDrop);
+        UIPop.Show(m_PlacementHint);
     }
 
+    /// <summary>안내를 끝낸다. 축하 문구가 떠 있으면 그건 그대로 두고 끝날 때 함께 숨긴다.</summary>
     private void HideCareHint()
     {
         m_ActiveHint = -1;
-        if (m_PlacementHint != null)
-            m_PlacementHint.gameObject.SetActive(false);
+        if (m_NoticeUntil < 0f)
+            UIPop.Hide(m_PlacementHint);
+    }
+
+    /// <summary>성장 단계가 오르면 안내 칸에 축하 문구를 잠깐 띄운다. (반짝 소리는 CatSounds가 낸다)</summary>
+    private void OnStageChanged(CatStage stage)
+    {
+        if (m_State != State.Raising || m_PlacementHint == null || m_HintLabel == null)
+            return;
+        string text = stage == CatStage.Child ? m_ChildText : stage == CatStage.Adult ? m_AdultText : null;
+        if (string.IsNullOrEmpty(text))
+            return;
+
+        m_NoticeUntil = Time.time + m_StageTextDuration;
+        m_HintLabel.text = text;
+        if (m_PlacementHint.gameObject.activeSelf == false)
+            SnapInFront(m_PlacementHint, m_HintDistance, m_HintDrop);
+        UIPop.Show(m_PlacementHint);
+    }
+
+    /// <summary>패널 안 버튼에 누를 때 통통 튀는 반응을 붙인다.</summary>
+    private static void AddButtonBounce(Transform panel)
+    {
+        if (panel == null)
+            return;
+        foreach (var button in panel.GetComponentsInChildren<Button>(true))
+        {
+            if (button.GetComponent<UIButtonBounce>() == null)
+                button.gameObject.AddComponent<UIButtonBounce>();
+        }
     }
 
     private int CareCount(CareHint hint)
@@ -318,7 +398,10 @@ public class GameFlow : MonoBehaviour
     private void StartEnding()
     {
         m_RaisingEndTime = Time.time;
+        m_NoticeUntil = -1f;
         HideCareHint();
+        if (m_Growth != null)
+            m_Growth.StageChanged -= OnStageChanged;
         SetState(State.Ending);
 
         var cat = m_Placer != null ? m_Placer.PlacedCat : null;
@@ -356,9 +439,9 @@ public class GameFlow : MonoBehaviour
 
         if (m_ResultPanel != null)
         {
-            m_ResultPanel.gameObject.SetActive(true);
             SoundBank.Play(Sfx.Result);
             SnapInFront(m_ResultPanel, m_PanelDistance, m_PanelDrop);
+            UIPop.Show(m_ResultPanel);
         }
         SetState(State.Result);
     }

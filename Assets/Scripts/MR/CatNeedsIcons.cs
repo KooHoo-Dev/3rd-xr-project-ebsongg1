@@ -269,7 +269,7 @@ public class CatNeedsIcons : MonoBehaviour
 
     private const int k_TextureSize = 64;
 
-    private delegate bool Shape(Vector2 p);
+    internal delegate bool Shape(Vector2 p);
 
     private static void CreateSprites()
     {
@@ -298,13 +298,18 @@ public class CatNeedsIcons : MonoBehaviour
         return (inBody || inTail) && inEye == false;
     }
 
-    private static bool DrawHeart(Vector2 p)
+    /// <summary>
+    /// 하트 곡선 (x² + y² - 1)³ - x²y³ ≤ 0 하나로 그려서 이음매 없이 둥글게 이어진다.
+    /// 곡선은 가로 ±1.14, 세로 -1 ~ 1.2 범위라 가운데(0.1)를 맞추고 그림의 약 72% 크기로 줄인다.
+    /// 쓰다듬기 하트(CatEffects)도 같은 모양을 쓴다.
+    /// </summary>
+    internal static bool DrawHeart(Vector2 p)
     {
-        // 원 두 개 + 아래로 뾰족한 삼각형
-        bool left = (p - new Vector2(-0.14f, 0.1f)).magnitude < 0.17f;
-        bool right = (p - new Vector2(0.14f, 0.1f)).magnitude < 0.17f;
-        bool bottom = p.y <= 0.13f && p.y > -0.36f && Mathf.Abs(p.x) < (p.y + 0.36f) * 0.62f;
-        return left || right || bottom;
+        const float k_Scale = 0.32f;
+        float x = p.x / k_Scale;
+        float y = p.y / k_Scale + 0.1f;
+        float a = x * x + y * y - 1f;
+        return a * a * a - x * x * y * y * y <= 0f;
     }
 
     private static bool DrawMoon(Vector2 p)
@@ -315,7 +320,7 @@ public class CatNeedsIcons : MonoBehaviour
         return outer && cut == false;
     }
 
-    private static Sprite MakeSprite(string spriteName, Shape shape)
+    internal static Sprite MakeSprite(string spriteName, Shape shape)
     {
         const int sub = 4;
         var tex = new Texture2D(k_TextureSize, k_TextureSize, TextureFormat.RGBA32, false)

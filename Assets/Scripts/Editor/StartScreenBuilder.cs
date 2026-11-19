@@ -290,6 +290,8 @@ public static class StartScreenBuilder
         colors.highlightedColor = new Color(1f, 0.88f, 0.85f);
         colors.pressedColor = new Color(0.85f, 0.70f, 0.66f);
         button.colors = colors;
+        // 레이를 올리면 살짝 커지고 누르면 통통 튄다. (GameFlow도 실행할 때 없으면 붙인다)
+        image.gameObject.AddComponent<UIButtonBounce>();
 
         var text = CreateText(image.transform, "Label", label, font, 30f, Color.white, TextAlignmentOptions.Center);
         text.fontStyle = FontStyles.Bold;

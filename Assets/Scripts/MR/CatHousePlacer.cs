@@ -289,6 +289,10 @@ public class CatHousePlacer : MonoBehaviour
             // 상태에 따라 나는 소리 (보채기 · 골골 · 성장)
             if (cat.GetComponent<CatSounds>() == null)
                 cat.AddComponent<CatSounds>();
+
+            // 쓰다듬기 하트 · 성장 반짝이
+            if (cat.GetComponent<CatEffects>() == null)
+                cat.AddComponent<CatEffects>();
         }
 
         PlaceFeeding(plane, root);
